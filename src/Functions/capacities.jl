@@ -62,9 +62,11 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     new_sections = Vector{SolidSection}()
     for sub_s in compoundsection.solids
         sub_s_ymax = sub_s.ymax #global coordinate
-        c_depth_local = sub_s_ymax - c_depth_global 
+        sub_s_ymin = sub_s.ymin 
+        c_depth_local = sub_s_ymax - c_depth_global
         if c_depth_local > 0
-             push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
+            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
+            push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
         end
     end
 
@@ -109,8 +111,12 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     new_sections = Vector{SolidSection}()
     for sub_s in compoundsection.solids
         sub_s_ymax = sub_s.ymax
+        sub_s_ymin = sub_s.ymin 
+
         c_depth_local = sub_s_ymax - c_depth_global
         if c_depth_local > 0
+            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
+
                 push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
         end
     end
