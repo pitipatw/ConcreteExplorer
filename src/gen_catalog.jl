@@ -45,7 +45,7 @@ function mapping(n::Vector{Int64}, idx::Vector{Int64})
 end 
 
 function get_catalog(test::Bool)
-    L  = 100.0
+    L  = 250.0
     t  = 17.5
     Lc = 15.0
     return get_catalog(L,t,Lc, run_test = test)
