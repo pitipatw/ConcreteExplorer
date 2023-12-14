@@ -103,10 +103,10 @@ Find the optimum result for each element.
 For the same element, will use the same fc′ steel size and post tensioning stress.
 
 """
-#function find_optimum(output_results, demands)
+function find_optimum(output_results, demands)
 ns = size(demands)[1]
 ne = unique(demands[!,:e_idx]) #python starts at 0
-element_designs = Dict(k=> [[]] for k in unique(demands[!,"e_idx"])) #element index to list of designs
+elements_designs = Dict(k=> [[]] for k in unique(demands[!,"e_idx"])) #element index to list of designs
 
 elements_to_sections = Dict(k=> Int[] for k in unique(demands[!,"e_idx"]))
 for i = 1:ns
@@ -129,8 +129,8 @@ for i in ne #loop each element
     feasible_idx = output_results[sections[mid]]
     
     #catalog was already sorted, so I think we can leave this part, just filter, to save time.
-    # sub_catalog = sort!(catalog[feasible_idx, :], [:carbon,:ec])
-    sub_catalog = catalog[feasible_idx, :]
+    sub_catalog = sort(catalog[feasible_idx, :], [:carbon,:fc′, :ec])
+    # sub_catalog = catalog[feasible_idx, :]
 
     #now, loop each design in the sub catalog, see if as and fpe are available in all sections.
     #if not, remove that design from the sub catalog.
@@ -154,10 +154,10 @@ for i in ne #loop each element
                 all_fpe = false
             end
         end
-        # if all_as && all_fpe
-        #     #first run, found, move on.
-        #     break
-        # end
+        if all_as && all_fpe
+            #first run, found, move on.
+            break
+        end
     end
 
     # sort!(sub_catalog, [:carbon, :fpe, :as, :ec])
@@ -166,7 +166,7 @@ for i in ne #loop each element
     this_fpe = sub_catalog[1,:fpe]
     this_as = sub_catalog[1, :as]
 
-    section_designs = Vector{Vector}(undef, ns)
+    sections_designs = Vector{Vector}(undef, ns)
     for is in eachindex(elements_to_sections[i])
         #current section index
         s = elements_to_sections[i][is]
@@ -178,38 +178,37 @@ for i in ne #loop each element
 
         this_catalog = filter([:fpe, :as] => fpe_as , catalog[output_results[s],:])
 
-        sort!(this_catalog, [:carbon, :ec])
+        sort!(this_catalog, [:carbon,:ec])
 
 
         
         #get the first one, it's the best.
         select_ID= this_catalog[1,:ID]
         #find lowest e for this one.
-        section_designs[is] = collect(catalog[select_ID,:])
-        println(section_designs[is])
+        sections_designs[is] = collect(catalog[select_ID,:])
+        println(sections_designs[is])
         end
 
-    element_designs[i] = section_designs
+    elements_designs[i] = sections_designs
 
 end
 
-# final_designs = Vector{Vector}(undef, length(element_designs))
-# for i in 1:length(element_designs) 
-#     #just select the first one to design.
-#     final_designs[i] = Array{Float64,1}(element_designs[i][1,:])
-# end
-
-
-# final_designs2 = Vector{Vector}(undef, length(element_designs))
-# for i in 1:length(element_designs)
-#     sections = elements_to_sections[i]
-#     fc′s = unique()
-#     ass  =
-#     fpes =
-#     s_idx = 2
-#     while s_idx != length(sections)
-
-
-#     for s in sections 
+return elements_designs
+end
         
+elements_designs = find_optimum(output_results, demands)
 
+list_fc′ = Vector{Float64}(undef, ns)
+for i in keys(elements_designs)
+    println(" #### ",i)
+    for j in eachindex(elements_designs[i])
+        println(elements_designs[i][j][9])
+        println(elements_designs[i][j][1])
+        # list_fc′[elements_designs[i][j][9]] = elements_designs[i][j][1]
+    end
+end
+
+
+open("designs.json","w") do f
+    JSON.print(f, elements_designs)
+end

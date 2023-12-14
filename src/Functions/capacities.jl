@@ -138,8 +138,10 @@ from fib model code.
 """
 function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
     shear_ratio = 0.30,
-    fR1 = 2.0,
-    fR3 = 2.0 * 0.850)
+    # fR1 = 2.0,
+    # fR3 = 2.0 * 0.850)
+    fR1 = 3.0,
+    fR3 = 3.0) #fR1 and fR3 from PP -> https://eprints.whiterose.ac.uk/179192/3/sustainability-13-11479.pdf
 
     #Shear calculation.
     ac = compoundsection.area
