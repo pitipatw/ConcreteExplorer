@@ -28,7 +28,7 @@ function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
 end
 
 """
-get moment capacity of a section
+get moment capacity of a post tensioned section
 Mu [kNm]
 """
 function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
