@@ -3,23 +3,32 @@ include("beamcalc.jl")
 using CSV, DataFrames
 #loop through dataset.
 
-dataset_jon = CSV.read("src/Compiled Concrete EPD Data Revised 11_06_2023.csv", DataFrame)
-fc′_jon_psi = dataset_jon[!,"Concrete Compressive Strength (psi)"]
+dataset_Broyles = CSV.read("src/Compiled Concrete EPD Data Revised 11_06_2023.csv", DataFrame)
+#remove one with too high Embodied Carbon (mroe than 2000)
+ec_Broyles = dataset_jon[!, "A1-A3 Global Warming Potential (kg CO2-eq)"]
+
+filter = ec_Broyles .> 800
+deleteat!(dataset_Broyles, filter)
+
+fc′_Broyles_psi = dataset_Broyles[!,"Concrete Compressive Strength (psi)"]
+ec_Broyles = dataset_Broyles[!, "A1-A3 Global Warming Potential (kg CO2-eq)"]
 #convert to MPa
-fc′_jon_MPa = fc′_jon_psi*0.00689476
-ec_jon = dataset_jon[!, "A1-A3 Global Warming Potential (kg CO2-eq)"]
+fc′_Broyles_MPa = fc′_Broyles_psi*0.00689476
 
-f_jon = Figure(size = (400,400))
-ax_jon = Axis(f_jon[1,1]) 
-scatter!(ax_jon, fc′_jon_MPa,ec_jon)
 
+
+
+
+fig_Broyles = Figure(size = (400,400))
+ax_Broyles = Axis(fig_Broyles[1,1]) 
+# boxplot!(ax_hist, label, embodied_carbon_all)
 
 #loop indices
-embodied_carbon_all = zeros(length(fc′_jon_MPa ))
-valid = zeros(length(fc′_jon_MPa ))
-for i in eachindex(fc′_jon_MPa)
-    fc′ = fc′_jon_MPa[i]
-    ec_concrete = ec_jon[i]
+embodied_carbon_all = zeros(length(fc′_Broyles_MPa ))
+valid = zeros(length(fc′_Broyles_MPa ))
+for i in eachindex(fc′_Broyles_MPa)
+    fc′ = fc′_Broyles_MPa[i]
+    ec_concrete = ec_Broyles[i]
     rc_section, serviceability = beam_design(fc′, ec_concrete*10^(-9));
     if isnothing(rc_section)
         embodied_carbon_all[i] = 0.0
@@ -29,15 +38,14 @@ for i in eachindex(fc′_jon_MPa)
     valid[i] = serviceability
 end
 
-# f_beams = Figure(size = (400,400))
-ax_beams = Axis(f_jon[1,2]) 
-scatter!(ax_beams, fc′_jon_MPa,embodied_carbon_all)
+ax_beams = Axis(fig_Broyles[2,1]) 
+scatter!(ax_beams, fc′_Broyles_MPa,embodied_carbon_all)
 
 
 #define groups as done in the paper
-label = Vector{Int64}(undef, length(fc′_jon))
-for i in eachindex(fc′_jon_MPa)
-    fc′ = fc′_jon_psi[i]
+label = Vector{Int64}(undef, length(fc′_Broyles_MPa))
+for i in eachindex(fc′_Broyles_MPa)
+    fc′ = fc′_Broyles_psi[i]
     if fc′ <2000
         label[i] = 1
     elseif fc′< 3000
@@ -59,5 +67,12 @@ for i in eachindex(fc′_jon_MPa)
     end
 end
 
-ax_hist = Axis(f_jon[2,2])
-boxplot(label, embodied_carbon_all)
+
+boxplot!(ax_Broyles,label,ec_Broyles, color = :red)
+ax_hist = Axis(fig_Broyles[1,2])
+ax_hist.xticks=  1:9
+ax_hist.xtickformat =  x -> ["100","2","3","4","5","6","7","8","9"][Int.(x)]
+boxplot!(ax_hist, label, embodied_carbon_all)
+# boxplot!(ax_hist, [3,1], [1,2], label = ["cat", "dog"])
+
+fig_Broyles

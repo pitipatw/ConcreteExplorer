@@ -31,12 +31,15 @@ function draw(rc_section::ReinforcedConcreteSection)
     return f1
 end
 
+"""
 
+"""
 function beam_design(fc′::Float64, ec_concrete::Float64;
     span::Float64 = 10_000.0,
-    bay::Float64 = 10_000.0,
-    wLL::Float64 = 1.92e-3,
-    wSDL::Float64 = 1.5e-3,
+    bay::Float64  = 10_000.0,
+    # wLL::Float64  = 1.92e-3,
+    wLL::Float64  = 2.40e-3,
+    wSDL::Float64 = (24e-6*300), #2400kg/m3 * 300cm -> N/mm2
     echo = false
     )
 
@@ -76,8 +79,8 @@ function beam_design(fc′::Float64, ec_concrete::Float64;
     w = w_load + w_beamDL
     Mdemand = w * span^2/8
     Vdemand = w * span/2
-    println("Moment Demand: ", Mdemand)
-    println("Shear Demand: ", Vdemand)
+    # println("Moment Demand: ", Mdemand)
+    # println("Shear Demand: ", Vdemand)
     try
         C = 2*Mdemand/(0.85*fc′*b)
         B = -2*d
@@ -117,17 +120,17 @@ function beam_design(fc′::Float64, ec_concrete::Float64;
     
     a_maximum = area_max*fy/(0.85*fc′*b)
     c_maximum = a_maximum/0.85
-    @show ϵs_maximum = 0.003*(d-c_maximum)/c_maximum
+    ϵs_maximum = 0.003*(d-c_maximum)/c_maximum
 
     a_minimum = area_min*fy/(0.85*fc′*b)
     c_minimum = a_minimum/0.85
-    @show ϵs_minimum = 0.003*(d-c_minimum)/c_minimum
+    ϵs_minimum = 0.003*(d-c_minimum)/c_minimum
 
 
     reinforcement_area = section.area*ρ_selected
     a = reinforcement_area*fy/(0.85*fc′*b)
     c = a/0.85
-    @show ϵs = 0.003*(d-c)/c
+    ϵs = 0.003*(d-c)/c
     if ϵs < 0.005
         println("Mean reinforcement is not ductile enough, using ρ_minimum instead")
         ρ_selected = ρ_min
