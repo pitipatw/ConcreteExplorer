@@ -90,7 +90,7 @@ function beam_design(fc′::Float64, ec_concrete::Float64;
     end
 
     if a < 0 
-        println("a is less than 0")
+        # println("a is less than 0")
         a = (-B + sqrt(B^2-4*C))/2
     end
 
@@ -102,7 +102,7 @@ function beam_design(fc′::Float64, ec_concrete::Float64;
     c = a/0.85
     ϵs = 0.003*(d-c)/c 
     if ϵs < 0.005
-        println("NON ductile behavior")
+        # println("NON ductile behavior")
     end
     #0.0018 is from ACI (see the jupyter notebook)
     ρ_min = clamp(as/(section.area-as), 0.0018, Inf)
@@ -132,12 +132,12 @@ function beam_design(fc′::Float64, ec_concrete::Float64;
     c = a/0.85
     ϵs = 0.003*(d-c)/c
     if ϵs < 0.005
-        println("Mean reinforcement is not ductile enough, using ρ_minimum instead")
+        # println("Mean reinforcement is not ductile enough, using ρ_minimum instead")
         ρ_selected = ρ_min
         reinforcement_area = section.area*ρ_selected
         a = reinforcement_area*fy/(0.85*fc′*b)
         c = a/0.85
-        @show ϵs = 0.003*(d-c)/c
+        ϵs = 0.003*(d-c)/c
     end
 
     # δ_max = 5*w*L^4/(384*E*I)
