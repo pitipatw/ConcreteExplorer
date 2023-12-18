@@ -22,13 +22,13 @@ ec for concrete and rebars are 1.0 (dummy)
 """
 function create_rc_section(
     # concrete_section::SolidSection
-    concrete_section::Matrix{Float64}
+    concrete_section::Matrix{Float64},
     # rebar_section::Vector{SolidSection}
-    rebar_section::Matrix{Float64}
+    rebar_section::Matrix{Float64},
     depth::Float64, 
     embodied_carbon::Float64)
     covering = 50.0 #mm
-    return ReinforcedConcreteSection(concrete_section, rebar_section,depth,embodied_carbon, 50.0,1.0,1.0)
+    return ReinforcedConcreteSection(concrete_section, rebar_section,depth,embodied_carbon, covering,1.0,1.0)
 end
 
 """
@@ -110,8 +110,13 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
 
     #check inside root more than 0?
     # B^2-4*C > 0 
+    try 
+        a = (-B - sqrt(B^2-4*C))/2
+    catch 
+        println("Under square root <0")
+        return nothing, 0.0
+    end
 
-    a = (-B - sqrt(B^2-4*C))/2
     a = a > 0 ? a : (-B + sqrt(B^2-4*C))/2
 
     # if a < 0 || a> d 
@@ -210,11 +215,11 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
     embodied_carbon = span*(ec_concrete*(area-reinforcement_area) + ec_rebar*reinforcement_area)
     # rc_section = create_rc_section(section, [circle1, circle2], d, embodied_carbon)
     
-    return embodied_carbon, serviceability
+    return embodied_carbon, reinforcement_area, serviceability
 end
 
 function beam_design(fc′::Float64, ec_concrete::Float64)
-    d = 600.0
+    d = 1000.0
     bd_ratio = 0.5
     println("Assuming d: ", d, " and bd_ratio: ", bd_ratio)
     return  beam_design(d, bd_ratio,fc′, ec_concrete)

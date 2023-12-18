@@ -137,8 +137,13 @@ function beam_opt(fc′::Float64, ec::Float64)
     model = Model(beam_obj)
     lb = [200.0, 0.5]
     ub = [1000.0 ,1.0]
+    
+    #do a grid serach on the bouded box. 
+    n = 5
+    x1 = lb[1]:(ub[1]-lb[1]):ub[1]
+    x2 = lb[1]:(ub[1]-lb[1]):ub[1]
 
-    x0 = [600.0, 0.75]
+    x0 = [1000.0, 0.75]
 
     println("Initial Guess", x0)
     println("Initial Obj: ", beam_obj(x0))
@@ -152,8 +157,8 @@ function beam_opt(fc′::Float64, ec::Float64)
     alg = NLoptAlg(:LN_COBYLA)
     options = NLoptOptions()
     result = optimize(model, alg, x0, options = options, convcriteria = KKTCriteria() )
-    println("Opt design: " ,result.minimizer)
-    println("Opt obj: ",result.minimum)
+    println("*Opt design: " ,result.minimizer)
+    println("*Opt obj: ",result.minimum)
 
     return result.minimizer, result.minimum
 end
