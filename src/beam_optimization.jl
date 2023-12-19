@@ -145,8 +145,7 @@ function beam_opt(fc′::Float64, ec::Float64)
 
     x0 = [1000.0, 0.75]
 
-    println("Initial Guess", x0)
-    println("Initial Obj: ", beam_obj(x0))
+
 
 
     addvar!(model, lb, ub, init = x0)
@@ -155,10 +154,12 @@ function beam_opt(fc′::Float64, ec::Float64)
     # alg = MMA02() # or MMA02()
     # options = MMAOptions(maxiter = 2000)
     alg = NLoptAlg(:LN_COBYLA)
+    # alg = NLoptAlg(:GD_STOGO)
+    # alg = NLoptAlg(:LD_LBFGS)
     options = NLoptOptions()
     result = optimize(model, alg, x0, options = options, convcriteria = KKTCriteria() )
-    println("*Opt design: " ,result.minimizer)
-    println("*Opt obj: ",result.minimum)
+    println(x0, " ==> ", result.minimizer )
+    println(beam_obj(x0), " ===> ", result.minimum)
 
     return result.minimizer, result.minimum
 end
