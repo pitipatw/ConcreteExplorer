@@ -10,4 +10,7 @@ function fc2e(fc′::Real)
    return out
 end
 
-
+function rebar2e(area::Real)
+    out = 120.0
+    return out 
+end

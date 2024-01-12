@@ -1,6 +1,32 @@
 include("../Geometry/pixelgeo.jl")
 include("../Functions/embodiedCarbon.jl")
 
+
+"""
+Beta 1 value for reinforced concrete compression section calculation
+"""
+function β1(fc′::Float64)
+    out = clamp(0.85 - 0.05 * (fc′ - 28.0) / 7, 0.65, 0.85)
+    return out
+end
+
+"""
+Capacity safety factor ϕ
+"""
+function ϕ(ϵ::Float64)
+    ϕ = clamp(0.65 + 0.25 * (ϵ - 0.002) / 0.003, 0.65, 0.90) # a factor between 0.65 to 0.9
+    return ϕ
+end
+
+"""
+fpy is based on ASTM A421
+"""
+function get_fps(fpe::Float64, fc′::Float64, ρₚ::Float64; fpy::Float64=1300.0)
+    fps = min(fpe + 70.0 + fc′ / (100.0 * ρₚ), fpe + 420.0, fpy)
+    return fps
+end
+
+
 """"
 get axial capacity of a section
 output: P[kN]
@@ -165,6 +191,25 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
 
 end
 
+"""
+Bases on Fib Model
+"""
+function get_fFtu(fFts::Float64, wu::Float64, CMOD3::Float64, fR1::Float64, fR3::Float64)
+    fFtu = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
+    return fFtu
+end
+
+"""
+from fib model code
+fFtuk = fFtu
+fck = fc′
+"""
+function get_v(ρs::Float64, fck::Float64, fctk::Float64, fFtuk::Float64, γc::Float64, scp::Float64, k::Float64)
+    out = 0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * scp
+    return out / 1000.0 #kN
+end
+
+
 
 """
 Calculate capacities of the given section
@@ -230,3 +275,5 @@ function get_capacities(fc′::Float64, as::Float64, ec::Float64, fpe::Float64,
 #Scatter plot the result.
     return pu, mu, vu, embodied
 end
+
+
