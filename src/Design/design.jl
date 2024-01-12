@@ -6,7 +6,7 @@ catalog format
 fc', as, ec, fpe, Pu, Mu, Vu, embodied
 """
 
-catalog = CSV.read(joinpath(@__DIR__,"Catalogs/catalog_static.csv"), DataFrame);
+catalog = CSV.read(joinpath(@__DIR__,"Catalogs/test_catalog.csv"), DataFrame);
 
 sort!(catalog, [:carbon, :fc′, :as, :ec])
 println("The catalog was sorted by ascending order from:")
