@@ -1,17 +1,14 @@
-using CSV, DataFrames, JSON
-using Dates
 
 """
 catalog format
 fc', as, ec, fpe, Pu, Mu, Vu, embodied
 """
 
-catalog = CSV.read(joinpath(@__DIR__,"Catalogs/test_catalog.csv"), DataFrame);
+catalog = CSV.read("src/Catalogs/test_catalog.csv", DataFrame); #load the pre-calc catalog
 
 sort!(catalog, [:carbon, :fc′, :as, :ec])
-println("The catalog was sorted by ascending order from:")
-println("carbon -> fc′ -> as -> ec")
-println(catalog[1:100,:])
+println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> ec")
+println(catalog[1:20,:])
 
 #load demands into a dictionary
 demand_path = joinpath(@__DIR__, "Demands/CISBAT_test_input.json");
