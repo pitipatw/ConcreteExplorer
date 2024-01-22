@@ -7,7 +7,7 @@ using Printf
 
 include("Geometry/pixelgeo.jl")
 # include("sectionproperties.jl")
-include("Functions/postTensionedFunc.jl")
+# include("Functions/postTensionedFunc.jl")
 include("Functions/embodiedCarbon.jl")
 include("Functions/capacities.jl")
 
@@ -112,7 +112,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__,"Catalogs/catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__,"Catalogs/JAN23_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)
