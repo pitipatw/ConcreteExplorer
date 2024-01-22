@@ -163,11 +163,11 @@ find shear capacity based on fiber reinforced
 from fib model code.
 """
 function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
-    shear_ratio = 0.30,
+    shear_ratio = 0.50,
     # fR1 = 2.0,
     # fR3 = 2.0 * 0.850)
-    fR1 = 3.0,
-    fR3 = 3.0) #fR1 and fR3 from PP -> https://eprints.whiterose.ac.uk/179192/3/sustainability-13-11479.pdf
+    fR1 = 5.0,
+    fR3 = 6.0) #fR1 and fR3 from PP -> https://eprints.whiterose.ac.uk/179192/3/sustainability-13-11479.pdf
 
     #Shear calculation.
     ac = compoundsection.area
@@ -184,32 +184,21 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     σcp1 = ned / ac
     σcp2 = 0.2 * fc′
     σcp = clamp(σcp1, 0.0, σcp2)
-    fFtu = get_fFtu(fFts, wu, CMOD3, fR1, fR3)
-    vn = ashear * get_v(ρs, fc′, fctk, fFtu, 1.0, σcp1, k)# already in kN
-    vu = 0.75 * vn
+    fFtuk = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
+
+    #fib notation 
+    fck = fc′
+
+    #constant 
+    γc = 1.0
+
+    vn = ashear * (0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * σcp)
+    
+    vu = 0.75 * vn/1000 # kN
+
  return vu
 
 end
-
-"""
-Bases on Fib Model
-"""
-function get_fFtu(fFts::Float64, wu::Float64, CMOD3::Float64, fR1::Float64, fR3::Float64)
-    fFtu = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
-    return fFtu
-end
-
-"""
-from fib model code
-fFtuk = fFtu
-fck = fc′
-"""
-function get_v(ρs::Float64, fck::Float64, fctk::Float64, fFtuk::Float64, γc::Float64, scp::Float64, k::Float64)
-    out = 0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * scp
-    return out / 1000.0 #kN
-end
-
-
 
 """
 Calculate capacities of the given section
