@@ -24,55 +24,41 @@ function mapping(n::Vector{Int64}, idx::Vector{Int64})
     return sum(d)
 end 
 
-function get_catalog(test::Bool)
-    L  = [250.0]
-    t  = [17.5]
-    Lc = [15.0]
 
-    set_L  = [400.0]
-    set_t  = [40.0]
-    set_Lc = [40.0]
-    out = 0
-    #loop here
-    for i in [1]
-        L = set_L[i]
-        t = set_t[i]
-        Lc = set_Lc[i]
-
-        out = get_catalog(L,t,Lc, test = test)
+function get_catalog(test::Bool)::DataFrame
+    pixel_sections = [ 205.0 35.0 30.0] #updated by Jenna Jan 2024
+    out = DataFrame()
+    for i in 1:size(pixel_sections)[1]
+        L, t,Lc = pixel_sections[i,:]
+        sub_catalog = get_catalog(L,t,Lc, test = test)
+        out = vcat(out, sub_catalog)
     end
-
     return out
 end
 
-
-function get_catalog(L,t,Lc; test=true)
-    if !test
-        range_fc′ = 28.:1.:56.
-        # range_as = 90.0:10.0:140  #[99.0, 140.0]
-        range_as = [99.0,140.0]
-        range_ec = 0.5:0.025:1.2
-        range_fpe = (0.00:0.025:0.7) * 1860.0
-    elseif test
+function get_catalog(L,t,Lc; test=true)::DataFrame
+    if test
         #test
         range_fc′ = 28.
         range_as = 140.0
         range_ec = 0.05
         range_fpe = 186.0
+    elseif !test
+        
+        range_fc′ = 28.:1.:56.
+        range_as = [99.0*2,140.0*2] # x2 are for 2 ropes on 2 sides
+        range_ec = 0.5:0.025:1.2
+        range_fpe = (0.00:0.025:0.7) * 1860.0
+
     else 
         println("Error Invalid test case")
         return nothing
     end
 
-    nfc′ = length(range_fc′)
-    nas  = length(range_as)
-    nec  = length(range_ec)
-    nfpe = length(range_fpe)
-    ntotal = nfc′ * nas * nec * nfpe
-    n = [nfc′, nas, nec, nfpe]
+    n = length.(range_fc′, range_as, range_ec, range_fpe)
+    ntotal = prod(n)
 
-
-    results = Matrix{Float64}(undef, ntotal, 8 + 3) #L t Lc
+    results = Matrix{Float64}(undef, prod(n), 8 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_fc′ in eachindex(range_fc′)
@@ -83,7 +69,9 @@ function get_catalog(L,t,Lc; test=true)
                     as = range_as[idx_as]
                     ec = range_ec[idx_ec]
                     fpe = range_fpe[idx_fpe]
-
+                    #to do
+                    #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
+                    #then we do get_capacities(Section)
                     pu, mu, vu, embodied = get_capacities(fc′, as, ec, fpe, L, t, Lc)
                     idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe]
 
