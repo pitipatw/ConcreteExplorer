@@ -43,12 +43,11 @@ function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
  
      #Pure Compression Capacity Calculation
      
-     
      ccn = 0.85 * fc′ * ac
      #*need a justification on 0.003 Ep
      # pn = (ccn - (fpe - 0.003 * Ep) * as) / 1000 # convert to [kN]
-     pn = (ccn - fpe* as) / 1000 # convert to [kN]
-     pu = 0.65 * 0.8 * pn #[kN]
+     pn = (ccn - fpe* as)
+     pu = 0.65 * 0.8 * pn /1000 #[kN]
      
      return pu
 end
@@ -76,7 +75,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         println("Acomp exceeds Ac, using Ac instead")
         acomp = ac
     end
-
+    # @show acomp/ac
     #rebar position measure from 0.0 (centroid) down, relative value
     rebarpos = ec*(-L)
     #depth is from the top most of the section
@@ -131,8 +130,6 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         end
     end
 
-
-
     c_depth_global = ymax - c_depth
     new_sections = Vector{SolidSection}()
     for sub_s in compoundsection.solids
@@ -149,11 +146,13 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     
     cgcomp = CompoundSection(new_sections).centroid
 
+    # @show rebarpos
+    # @show cgcomp
     arm = cgcomp[2] - rebarpos
     #moment arm of the section is the distance between the centroid of the compression area and the steel.
 
     mn = 0.85 * fc′ * ac * arm / 1e6 #[kNm]
-    mu = Φ(ϵs) * mn #[kNm]
+    mu = ϕ(ϵs) * mn #[kNm]
 
     return mu
 end
@@ -163,10 +162,10 @@ find shear capacity based on fiber reinforced
 from fib model code.
 """
 function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
-    shear_ratio = 0.50,
+    shear_ratio = 1.0,
     # fR1 = 2.0,
     # fR3 = 2.0 * 0.850)
-    fR1 = 5.0,
+    fR1 = 6.0,
     fR3 = 6.0) #fR1 and fR3 from PP -> https://eprints.whiterose.ac.uk/179192/3/sustainability-13-11479.pdf
 
     #Shear calculation.
@@ -180,7 +179,7 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     wu = 1.5
     CMOD3 = 1.5
     ptforce = get_Pu(compoundsection, fc′, as, fpe)
-    ned = ptforce# can be different
+    ned = 1000*ptforce# can be different
     σcp1 = ned / ac
     σcp2 = 0.2 * fc′
     σcp = clamp(σcp1, 0.0, σcp2)
