@@ -87,10 +87,10 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
                         elseif T == 2.0
                             compoundsection = make_X2_layup_section(L, t, Lc)
                             #also have to do x4, but will see.
-                            # section = make_X4_layup_section(L, t, Lc)
                         elseif T == 4.0
                             compoundsection = make_X4_layup_section(L, t, Lc)
-                            println("Invalid type")
+                        else 
+                            println("Invalid Type")
                         end
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
