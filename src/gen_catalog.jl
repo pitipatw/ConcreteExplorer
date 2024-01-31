@@ -12,7 +12,7 @@ include("Functions/capacities.jl")
 """
 Map an n dimentional vector into an index.
 """
-function mapping(n::Vector{Int64}, idx::Vector{Int64})
+function mapping(n::Vector{Int64}, idx::Vector{Int64})::Int64
     d = Vector{Int64}(undef, length(n))
     for i in eachindex(n) 
         if i == length(d)
@@ -41,7 +41,7 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
         #test
         range_fc′ = 28.
         range_as = 140.0
-        range_ec = 0.05
+        range_dps = 50.
         range_fpe = 186.0
     elseif !test
         fc_fiber  = CSV.read("src//fc_fiber.csv", DataFrame);
@@ -52,30 +52,30 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
         @assert length(range_fc′) == length(range_fR1) == length(range_fR3)
 
         range_as = [99.0*2,140.0*2] # x2 are for 2 ropes on 2 sides
-        range_ec = 0.5:0.025:1.2
-        range_fpe = (0.00:0.025:0.7) * 1860.0
+        range_dps = vcat(0.0, 50:10:300) #mm
+        range_fpe = (0.00:0.025:0.7) * 1860.0 #MPa
 
     else 
         println("Error Invalid test case")
         return nothing
     end
 
-    n = length.(range_fc′, range_as, range_ec, range_fpe)
+    n = length.(range_fc′, range_as, range_dps, range_fpe)
     ntotal = prod(n)
-
-    results = Matrix{Float64}(undef, prod(n), 8 + 3) #L t Lc
+    #Pre allocating results
+    results = Matrix{Float64}(undef, prod(n), 8 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_fc′ in eachindex(range_fc′)
         for idx_as in eachindex(range_as)
-            for idx_ec in eachindex(range_ec)
+            for idx_ec in eachindex(range_dps)
                 for idx_fpe in eachindex(range_fpe)
                     fc′ = range_fc′[idx_fc′]
                     fR1 = range_fR1[idx_fc′]
                     fR3 = range_fR3[idx_fc′]
 
                     as = range_as[idx_as]
-                    ec = range_ec[idx_ec]
+                    ec = range_dps[idx_ec]
                     fpe = range_fpe[idx_fpe]
                     #to do
                     #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
@@ -84,12 +84,12 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
                     idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe]
 
                     idx = mapping(n,idx_all)
-                    results[idx,:] = [fc′, as, ec, fpe, pu, mu, vu, embodied, L, t, Lc]
+                    results[idx,:] = [fc′, fR1, fR3, as, ec, fpe, pu, mu, vu, embodied, L, t, Lc]
                 end
             end
         end
     end
-    df = DataFrame(results , [ :fc′, :as,:ec,:fpe,:Pu,:Mu, :Vu, :carbon, :L, :t,:Lc])
+    df = DataFrame(results , [:fc′, :fR1, :fR3, :as,:ec,:fpe,:Pu,:Mu, :Vu, :carbon, :L, :t,:Lc])
     df[!,:ID] = 1:ntotal
     println("Got Catalog with $ntotal outputs")
     return df# results # DataFrame(results)
