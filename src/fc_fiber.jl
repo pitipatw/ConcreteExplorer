@@ -15,6 +15,9 @@ Available
 
 using CSV, DataFrames
 println(@__DIR__)
-fc_fiber  = CSV.read("fc_fiber.csv", DataFrame);
+fc_fiber  = CSV.read("src//fc_fiber.csv", DataFrame);
 
+fc_fiber[!, :strength]
 
+fc = collect(fc_fiber[!, :strength])
+dosage = collect(fc_fiber[!, :dosage])

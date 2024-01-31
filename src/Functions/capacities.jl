@@ -161,14 +161,12 @@ end
 find shear capacity based on fiber reinforced
 from fib model code.
 """
-function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
-    shear_ratio = 1.0,
+function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, fpe::Float64, L::Float64;
+    shear_ratio = 1.0)
     # fR1 = 2.0,
     # fR3 = 2.0 * 0.850)
-    fR1 = 6.0,
-    fR3 = 6.0) #fR1 and fR3 from PP -> https://eprints.whiterose.ac.uk/179192/3/sustainability-13-11479.pdf
-
     #Shear calculation.
+
     ac = compoundsection.area
     d = L
     ashear = ac * shear_ratio
@@ -198,6 +196,15 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
  return vu
 
 end
+#get Vn , then Vu = 0.75Vn
+
+# function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64)
+
+#     a = 1 
+#     return
+# end
+
+
 
 """
 Calculate capacities of the given section
@@ -207,35 +214,28 @@ Pu [kN]
 Mu [kNm]
 Shear [kN]
 """
-function get_capacities(fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, ec::Float64, fpe::Float64,
-    L::Float64,
-    t::Float64,
-    Lc::Float64;
-    echo = false,
-    # L = 102.5, t = 17.5, Lc = 15.,
-    # L = 202.5, t = 17.5, Lc = 15.,
-    T = "Beam",
-    Ep = 200_000,)
-
+function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, ec::Float64, fpe::Float64,
+    L::Float64;
+    echo = false)
 
     #Calculation starts here.
     
-    #Load the right sections (Using AsapSections here)
-    if T == "Beam"
-        compoundsection = make_Y_layup_section(L, t, Lc)
-    elseif T == "Column"
-        compoundsection = make_X2_layup_section(L, t, Lc)
-        #also have to do x4, but will see.
-        # section = make_X4_layup_section(L, t, Lc)
-    else
-        println("Invalid type")
-    end
+    # #Load the right sections (Using AsapSections here)
+    # if T == "Beam"
+    #     compoundsection = make_Y_layup_section(L, t, Lc)
+    # elseif T == "Column"
+    #     compoundsection = make_X2_layup_section(L, t, Lc)
+    #     #also have to do x4, but will see.
+    #     # section = make_X4_layup_section(L, t, Lc)
+    # else
+    #     println("Invalid type")
+    # end
 
     # compoundsection = CompoundSection(sections)
 
     pu = get_Pu(compoundsection, fc′, as, fpe)
     mu = get_Mu(compoundsection, fc′, as, fpe, ec, L)
-    vu = get_Vu(compoundsection, fc′, as, fpe, ec, L,)
+    vu = get_Vu(compoundsection, fc′, fR1, fR3, as, fpe, L,)
 
     #Embodied Carbon Calculation
     cfc = fc2e(fc′) #kgCO2e/m3
@@ -245,7 +245,7 @@ function get_capacities(fc′::Float64, fR1::Float64, fR3::Float64, as::Float64,
     cst = 0.854*7850 #kgCO2e/m3
     
     ac = compoundsection.area
-    embodied = ( ac*cfc + as*cst )/ 1e6 
+    embodied = ( ac*cfc + as*cst )/ 1e6 # mm2 -> m2
     if echo
         @printf "The pure compression capacity is %.3f [kN]\n" pu
         @printf "The pure moment capacity is %.3f [kNm]\n" mu
