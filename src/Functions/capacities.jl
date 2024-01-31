@@ -207,7 +207,7 @@ Pu [kN]
 Mu [kNm]
 Shear [kN]
 """
-function get_capacities(fc′::Float64, as::Float64, ec::Float64, fpe::Float64,
+function get_capacities(fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, ec::Float64, fpe::Float64,
     L::Float64,
     t::Float64,
     Lc::Float64;
@@ -235,7 +235,7 @@ function get_capacities(fc′::Float64, as::Float64, ec::Float64, fpe::Float64,
 
     pu = get_Pu(compoundsection, fc′, as, fpe)
     mu = get_Mu(compoundsection, fc′, as, fpe, ec, L)
-    vu = get_Vu(compoundsection, fc′, as, fpe, ec, L)
+    vu = get_Vu(compoundsection, fc′, as, fpe, ec, L,)
 
     #Embodied Carbon Calculation
     cfc = fc2e(fc′) #kgCO2e/m3
