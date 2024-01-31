@@ -37,7 +37,7 @@ function get_catalog(test::Bool)::DataFrame
 end
 
 function get_catalog(L,t,Lc; test=true)::DataFrame
-    if test
+    if test #depreciated
         #test
         range_fc′ = 28.
         range_as = 140.0
@@ -54,22 +54,24 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
         range_as = [99.0*2,140.0*2] # x2 are for 2 ropes on 2 sides
         range_dps = vcat(0.0, 50:10:300) #mm
         range_fpe = (0.00:0.025:0.7) * 1860.0 #MPa
-
+        range_type =["Y", "X2", "X4"] #PixelFrame configuration
     else 
         println("Error Invalid test case")
         return nothing
     end
 
-    n = length.(range_fc′, range_as, range_dps, range_fpe)
+    n = length.(range_fc′, range_as, range_dps, range_fpe, range_type)
     ntotal = prod(n)
     #Pre allocating results
-    results = Matrix{Float64}(undef, prod(n), 8 + 2 + 3) #L t Lc
+    results = Matrix{Float64}(undef, prod(n), 9 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
+    for idx_type in eachindex(range_type)
     for idx_fc′ in eachindex(range_fc′)
         for idx_as in eachindex(range_as)
             for idx_ec in eachindex(range_dps)
                 for idx_fpe in eachindex(range_fpe)
+                    T = range_type[idx_type]
                     fc′ = range_fc′[idx_fc′]
                     fR1 = range_fR1[idx_fc′]
                     fR3 = range_fR3[idx_fc′]
@@ -79,8 +81,20 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
                     fpe = range_fpe[idx_fpe]
                     #to do
                     #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
-                    #then we do get_capacities(Section)
-                    pu, mu, vu, embodied = get_capacities(fc′, as, ec, fpe, L, t, Lc)
+                    #by type
+                    # if T == "Y"
+                    #     compoundsection = make_Y_layup_section(L, t, Lc)
+                    # elseif T == "X2"
+                    #     compoundsection = make_X2_layup_section(L, t, Lc)
+                    #     #also have to do x4, but will see.
+                    #     # section = make_X4_layup_section(L, t, Lc)
+                    # elseif T == "X4"
+                    #     compoundsection = make_X4_layup_section(L, t, Lc)
+                    #     println("Invalid type")
+                    # end
+                    # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
+                    # pu, mu, vu = get_capacities(pixelframesection)
+                    pu, mu, vu, embodied = get_capacities(fc′, fR1, fR3, as, ec, fpe, L, t, Lc)
                     idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe]
 
                     idx = mapping(n,idx_all)
