@@ -44,8 +44,13 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
         range_ec = 0.05
         range_fpe = 186.0
     elseif !test
-        
-        range_fc′ = 28.:1.:56.
+        fc_fiber  = CSV.read("src//fc_fiber.csv", DataFrame);
+        #These come in pair
+        range_fc′ = fc_fiber[!, :strength]
+        range_fR1 = fc_fiber[!, :fR1]
+        range_fR3 = fc_fiber[!, :fR3]
+        @assert length(range_fc′) == length(range_fR1) == length(range_fR3)
+
         range_as = [99.0*2,140.0*2] # x2 are for 2 ropes on 2 sides
         range_ec = 0.5:0.025:1.2
         range_fpe = (0.00:0.025:0.7) * 1860.0
@@ -66,6 +71,9 @@ function get_catalog(L,t,Lc; test=true)::DataFrame
             for idx_ec in eachindex(range_ec)
                 for idx_fpe in eachindex(range_fpe)
                     fc′ = range_fc′[idx_fc′]
+                    fR1 = range_fR1[idx_fc′]
+                    fR3 = range_fR3[idx_fc′]
+
                     as = range_as[idx_as]
                     ec = range_ec[idx_ec]
                     fpe = range_fpe[idx_fpe]
