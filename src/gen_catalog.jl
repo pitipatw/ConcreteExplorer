@@ -5,7 +5,7 @@ using CSV
 using AsapSections
 using Printf
 
-include("Geometry/pixelgeo.jl")
+include("Functions/Geometry/pixelgeo.jl")
 include("Functions/embodiedCarbon.jl")
 include("Functions/capacities.jl")
 
@@ -52,7 +52,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         @assert length(range_fc′) == length(range_fR1) == length(range_fR3)
 
         range_as = [99.0 * 2, 140.0 * 2] # x2 are for 2 ropes on 2 sides
-        range_dps = vcat(0.0, 50:10:300) #mm
+        range_dps = vcat(0.0, 50:10:300) #mm either in the middle, or 5cm shifted.
         range_fpe = (0.00:0.025:0.7) * 1860.0 #MPa
         range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     else
@@ -122,7 +122,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/JAN31_1_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB1_1_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)

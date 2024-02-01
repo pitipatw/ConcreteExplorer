@@ -1,4 +1,4 @@
-include("../Geometry/pixelgeo.jl")
+include("../Functions/Geometry/pixelgeo.jl")
 include("../Functions/embodiedCarbon.jl")
 
 
@@ -56,8 +56,12 @@ end
 get moment capacity of a post tensioned section
 Mu [kNm]
 """
-function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64;
+function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64, dps::Float64, L::Float64;
     Ep = 200_000,)
+#function get_Mu(pixelFramesection::PixelFrameSection)
+#@unpack compoundsection, fc′, as, fpe, dps, L = pixelframesection
+#as = sum(as)
+#fpe = fpe[1]
 
     #Pure Moment Capacity
     #concrete area
@@ -77,9 +81,9 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     end
     # @show acomp/ac
     #rebar position measure from 0.0 (centroid) down, relative value
-    rebarpos = ec*(-L)
+    rebarpos = -dps
     #depth is from the top most of the section
-    c_depth = depth_from_area(compoundsection,acomp,show_stats = false )
+    c_depth = depth_from_area(compoundsection,acomp,show_stats = false ) #local
     ymax = compoundsection.ymax #global coordinate
 
     c_depth_global = ymax - c_depth #global coordinate
@@ -95,53 +99,69 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         end
     end
 
-    cgcomp = CompoundSection(new_sections).centroid
-
-    # depth, cgcomp= getprop(acomp, L, t, Lc)
-    
-    # clipped_section = sutherland_hodge(section::PolygonalSection, y::Float64; return_section = true)
-    # mn_steel = as * fps * arm / 1e6 #[kNm]
-
     #Recheck with concrete.
     #check compression strain, make sure it's not more than 0.003
     # c = depth
     c = c_depth
     ϵs = fps / Ep
     d = ymax-rebarpos
-    ϵc = c * ϵs / ( d - c)
+    ϵc = c * ϵs / (d - c)
 
     if ϵc > 0.003
         # Compression strain is more than 0.003
-        # recalc based on the compression strain = 0.003
+        # recalc by forcing the compression strain = 0.003
         # ϵs now will be lower than 0.005
 
         #first find depth based on the 0.003 strain at the top
 
-        ϵc_new = 0.003
         c = L/2 #first guess
-        tol = 0.001
-
-        while tol > 0.001
-            ϵs_new = ϵc_new*(d - c) / c
+        tol = 1
+        counter = 0 
+        while tol > 0.001  #precision problem, if tol is too rough, new ϵc wont be exactly 0.003
+            counter  +=1 
+            if counter > 1000
+                println("Counter exceeds limit")
+                break
+            end
+            #numerical value error, let it slightly less than 0.003
+            ϵs_new = 0.0029*(d - c) / c
             fps_new = ϵs_new * Ep
             acomp = as * fps_new / (0.85 * fc′)
-            c_depth = depth_from_area(compoundsection,acomp,show_stats = false )
+            if acomp <0 
+                println(acomp)
+                @show c
+                @show d
+                @show L
+
+            end
+            c_depth = depth_from_area(compoundsection,acomp,rel_tol = 1e-4,show_stats = false )
             tol = abs(c_depth - c)/c
+            c = c_depth
+            ϵs = ϵs_new
+
         end
-    end
+        #making sure that ϵc is <= 0.003
+        ϵc = c * ϵs/ (d - c)
+        # @show ϵc
+        @assert ϵc <= 0.003
 
-    c_depth_global = ymax - c_depth
-    new_sections = Vector{SolidSection}()
-    for sub_s in compoundsection.solids
-        sub_s_ymax = sub_s.ymax
-        sub_s_ymin = sub_s.ymin 
+        c_depth_global = ymax - c_depth
+        new_sections = Vector{SolidSection}()
+        for sub_s in compoundsection.solids
+            sub_s_ymax = sub_s.ymax
+            sub_s_ymin = sub_s.ymin 
 
-        c_depth_local = sub_s_ymax - c_depth_global
-        if c_depth_local > 0
-            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
-
+            c_depth_local = sub_s_ymax - c_depth_global
+            if c_depth_local > 0
+                c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
                 push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
+            end
         end
+
+            #check es again to see if es can 
+        # @show ϵs
+        @assert ϵs >= 0.002
+
     end
     
     cgcomp = CompoundSection(new_sections).centroid
@@ -198,7 +218,7 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
 end
 #get Vn , then Vu = 0.75Vn
 
-# function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, fpe::Float64, ec::Float64, L::Float64)
+# function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, fpe::Float64, dps::Float64, L::Float64)
 
 #     a = 1 
 #     return
@@ -214,7 +234,7 @@ Pu [kN]
 Mu [kNm]
 Shear [kN]
 """
-function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, ec::Float64, fpe::Float64,
+function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, dps::Float64, fpe::Float64,
     L::Float64;
     echo = false)
 
@@ -234,7 +254,7 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
     # compoundsection = CompoundSection(sections)
 
     pu = get_Pu(compoundsection, fc′, as, fpe)
-    mu = get_Mu(compoundsection, fc′, as, fpe, ec, L)
+    mu = get_Mu(compoundsection, fc′, as, fpe, dps, L)
     vu = get_Vu(compoundsection, fc′, fR1, fR3, as, fpe, L,)
 
     #Embodied Carbon Calculation
