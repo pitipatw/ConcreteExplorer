@@ -1,13 +1,11 @@
 using LinearAlgebra
 using AsapSections
-# using PolygonInbounds
-# using GeometryTypes
 using StaticArrays
 
 
 """
-By Keith JL.
     makepixel(L::Real, t::Real, Lc::Real; n = 10)
+<By Keith JL.>
 L = length of pixel arm
 t = thickness
 Lc = straight region of pixel (length before arc)
