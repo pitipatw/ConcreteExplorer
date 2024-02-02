@@ -1,5 +1,3 @@
-using AsapSections
-
 abstract type AbstractStructuralElement end 
 abstract type AbstractPixelFrameElement end 
 

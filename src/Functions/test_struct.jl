@@ -7,3 +7,10 @@ mutable struct sub_test1
     end
 end
 
+function a()
+    b = [1,2,3]
+    return b,1,2,3
+end 
+
+println(typeof(a()))
+

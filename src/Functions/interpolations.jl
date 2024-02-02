@@ -4,7 +4,9 @@ using DataFrames
 function get_C, input area A and out put C from a csv file. 
 csv file dataformat is A,C
 """
-function get_C(A::Float64)
+function get_C(A::Float64; test::Bool = false)
+
+    if test
     #read the csv file
     filename = joinpath(@__DIR__,"table_AtoC.csv") #Make sure you got csv in the name
     data = CSV.read(filename,DataFrame)
@@ -19,13 +21,19 @@ function get_C(A::Float64)
     Ai_1 = A_data[index+1] #the next value of A
     C = C_data[index] + (C_data[index+1] - C_data[index])/(Ai_1 - Ai)*(A - Ai)
     return C
+    else
+        println("to do, linked to AsapSection function")
+        return nothing
+    end
+
 end
 
 """
 function get_Icrack input depth C output Icrack from a csv file. 
 csv file dataformat is C,Icrack
 """
-function get_Icrack(C::Float64)
+function get_Icrack(C::Float64; test::Bool = false)
+    if test
     #read the csv file
     filename = joinpath(@__DIR__,"table_CtoIcrack.csv") #Make sure you got csv in the name
     data = CSV.read(filename, DataFrame)
@@ -41,4 +49,8 @@ function get_Icrack(C::Float64)
     #get the Icrack value
     Icrack = Icrack_data[index]+(Icrack_data[index+1] - Icrack_data[index])/(Ci_1 - Ci)*(C - Ci)
     return Icrack
+    else 
+        println("Link to AsapSections' function")
+        return nothing
+    end
 end
