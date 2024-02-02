@@ -8,8 +8,8 @@ include("generalFunctions.jl")
 Create an element consists of PixelFrame sections
 """
 mutable struct PixelFrameElement <: AbstractPixelFrameElement
-    sections::Vector{AbstractPixelFrameSection}
-
+    # sections::Vector{AbstractPixelFrameSection}
+    sections::Vector{CompoundSection}
     fc′::Float64 # Concrete strength [MPa] ****Should update on the test day using cylinder test***
     Ec::Float64 # MPa  ACI fc-> Concrete modulus relationship [MPa]
     Eps::Float64 #Post tensioning steel modulus [MPa]
@@ -34,7 +34,8 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
     mg::Float64 # Moment due to selfweight [Nmm]
     fr::Float64 # Concrete cracking strenght [MPa]
     r::Float64 # Radius of gyration [mm]
-    #ps_force::Float64 # Post tensioning force [N]
+    ps_force::Float64 # Post tensioning force [N]
+    concrete_force::Float64
     fpe::Float64 # Effective post tensioning stress [MPa]
     ϵpe::Float64 # Effective post tensioning strain [-]
     ϵce::Float64 # Effective concrete strain [-]
@@ -51,7 +52,7 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         println("This is due to the holes and cuts for the actual test")
 
         compoundsection = make_Y_layup_section(141.7,19.1,25.2)
-        pixelframeelement = new([compundsection]) #it takes a vector of compound section
+        pixelframeelement = new([compoundsection]) #it takes a vector of compound section
 
         #..........Notes..........
         # Use Ld = Ls (this test only) 
@@ -66,19 +67,19 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         # Ec = 4700.0*sqrt(fc′) # MPa  ACI fc-> Concrete modulus relationship [MPa]
         pixelframeelement.Ec = 58000.0 # MPa  from the cylinder test
         pixelframeelement.Eps = 70000.0 #Post tensioning steel modulus [MPa]
-        pixelframeelement.fpy = 0.002 * Eps #MPa  
+        pixelframeelement.fpy = 0.002 * pixelframeelement.Eps #MPa  
         #Safe load on the website https://www.engineeringtoolbox.com/wire-rope-strength-d_1518.html 
         # is ~ 150 MPa. Currently 140 MPa :)
 
         # PixelFrame section/element properties
         pixelframeelement.em = 230.0 # Eccentricity at the middle of the member [mm]
         pixelframeelement.es = 0.0 # Eccentricity at the support of the member   [mm]
-        pixelframeelement.em0 = em # Initial eccentricity at the midspan        [mm]
+        pixelframeelement.em0 = pixelframeelement.em # Initial eccentricity at the midspan        [mm]
 
         centroid_to_top = 91.5 #[mm]
-        pixelframeelement.dps0 = centroid_to_top + em0 # Initial distance from the top to the point of application of the load [mm]
+        pixelframeelement.dps0 = centroid_to_top + pixelframeelement.em0 # Initial distance from the top to the point of application of the load [mm]
         pixelframeelement.Ls = 502.7 # Distance from support to the first load point [mm]
-        pixelframeelement.Ld = Ls    # Distance from support to the first deviator [mm]
+        pixelframeelement.Ld = pixelframeelement.Ls    # Distance from support to the first deviator [mm]
         pixelframeelement.L = 2000.0 # Total length of the member [mm]
         # two 1/4" bars with 1200 lb capacity
         pixelframeelement.Aps = 2.0 * (0.25 * 25.4)^2 * pi / 4.0 # Total area of the post tensioned steel [mm2]
@@ -88,23 +89,23 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         pixelframeelement.Itr = 6.4198e+07 #moment of inertia [mm4], no embedded steel, therefore, only from concrete.
         # Itr = 1.082e+8 this number includes deviated steels.
 
-        pixelframeelement.Zb = Itr/centroid_to_top # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
+        pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
         # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)
 
 
         #forces
-        pixelframeelement.w = Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
-        pixelframeelement.mg = w * L^2 / 8.0 # Moment due to selfweight [Nmm]
-        pixelframeelement.fr = 0.7 * sqrt(fc′) # Concrete cracking strenght [MPa]
-        pixelframeelement.r = sqrt(Itr / Atr) # Radius of gyration [mm]
+        pixelframeelement.w = pixelframeelement.Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
+        pixelframeelement.mg = pixelframeelement.w * pixelframeelement.L^2 / 8.0 # Moment due to selfweight [Nmm]
+        pixelframeelement.fr = 0.7 * sqrt(pixelframeelement.fc′) # Concrete cracking strenght [MPa]
+        pixelframeelement.r = sqrt(pixelframeelement.Itr / pixelframeelement.Atr) # Radius of gyration [mm]
         pixelframeelement.ps_force = 890.0/sind(24.0) # Post tensioning force [N]
         
-        pixelframeelement.Mdec = ps_force*em
-        pixelframeelement.concrete_force = ps_force*cos(24.0*pi/180.0) # 
-        pixelframeelement.fpe = ps_force/Aps # Effective post tensioning stress [MPa] ***will input the one on the test day***
-        pixelframeelement.ϵpe = fpe / Eps # Effective post tensioning strain [mm/mm]
+        pixelframeelement.Mdec = pixelframeelement.ps_force*pixelframeelement.em
+        pixelframeelement.concrete_force = pixelframeelement.ps_force*cos(24.0*pi/180.0) # 
+        pixelframeelement.fpe = pixelframeelement.ps_force/pixelframeelement.Aps # Effective post tensioning stress [MPa] ***will input the one on the test day***
+        pixelframeelement.ϵpe = pixelframeelement.fpe / pixelframeelement.Eps # Effective post tensioning strain [mm/mm]
         #find moment due to the applied force.
-        pixelframeelement.ϵce = ps_force*em/Zb/Ec - concrete_force/Atr/Ec # effetive strain in the concrete [mm/mm]
+        pixelframeelement.ϵce = pixelframeelement.ps_force*pixelframeelement.em/pixelframeelement.Zb/pixelframeelement.Ec - pixelframeelement.concrete_force/pixelframeelement.Atr/pixelframeelement.Ec # effetive strain in the concrete [mm/mm]
 
         pixelframeelement.test = true
         return pixelframeelement
@@ -113,12 +114,13 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
     """
         (To do)Create PixelFrame element from a vector of PixelFrameSection
     """
-    function pixelframeelement(pixelframesections::Vector{PixelFrameSection})
-        """
+    # function pixelframeelement(pixelframesections::Vector{PixelFrameSection})
+    #     """
 
-        """
-        return nothing
-    end
+    #     """
+    #     a = 1.0
+    #     return nothing
+    # end
 end
 
 

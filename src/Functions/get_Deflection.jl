@@ -1,8 +1,9 @@
 using UnPack
 
+include("definition.jl") #Will have to merge this with the normal stuff.
 include("functions.jl")
 include("interpolations.jl")
-
+include("structuralelement.jl")
 
 """
 Todo:
@@ -11,10 +12,13 @@ Todo:
 Return mid-span deflection of a simply supported pixelframe element
 """
 function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Float64;
-    loadstep::Float64=10.0)::Tuple{Vector{Float64}, Vector{Float64}}
+    loadstep::Float64=10.0)
 
     @unpack fc′,Ec,Eps,fpy,em,es,em0,dps0,Ls,Ld,L,Aps,Atr,Itr,Zb,w,mg,fr,r,fpe,ϵpe,ϵce,Mdec,test = pixelframeelement
-
+    
+    Mat = Material(fc′, Ec, Eps, fpy)
+    Sec = Section(em, es, em0, dps0, Ls, Ld, L, Aps, Atr, Itr, Zb)
+    f   = Loads(w, mg, fr, r, fpe, ϵpe, ϵce, Mdec)
     #Could do
     # if test
     #     get_Deflection(pixelframeelement)
@@ -62,8 +66,8 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
     #Based on figure 7 on the paper.
 
     conv1 = 1
-counter1 = 0
-counter2 = 0
+    counter1 = 0
+    counter2 = 0
     for i in eachindex(M)
         Mi = M[i] 
         Lc = getLc(Sec,Mcr,Mi)
@@ -165,4 +169,7 @@ counter2 = 0
     return outputs
 end 
 
-        
+
+#test
+element1 = PixelFrameElement()
+get_Deflection(element1, 4.448*8300)
