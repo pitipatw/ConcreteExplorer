@@ -1,4 +1,13 @@
-function pixelframe_properties!(pixelframesection::PixelFrameSection)::PixelFrameSection
+using AsapSections
+
+abstract type AbstractStructuralElement end 
+abstract type AbstractPixelFrameElement end 
+
+abstract type AbstractStructuralSection end 
+abstract type AbstractPixelFrameSection end
+
+
+function pixelframe_properties!(pixelframesection::AbstractPixelFrameSection)::AbstractPixelFrameSection
 
     pixelframesection.fc′::Float64 = 0.0
     pixelframesection.fR1::Float64 = 0.0
