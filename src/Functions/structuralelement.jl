@@ -43,7 +43,16 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
 
     test::Bool#True if this is from the half-scale test.
 
-        """ PixelFrameElement(test::Bool)
+        """PixelFrameElement(L::Float64, t::Float64, Lc::Float64, 
+        fc′::Float64, as::Float64, fpe::Float64, Le::Float64, dps0::Float64,) 
+        """
+
+
+
+
+
+
+        """ PixelFrameElement()
         Input cases for the half-scale test
         """
     function PixelFrameElement()
@@ -87,7 +96,7 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         #Transformed steel area = 347.96 mm2 
         pixelframeelement.Atr = 18537.69 # Transformed area of the cross section [mm2] (= Concrete area if there is no embedded rebars)
         pixelframeelement.Itr = 6.4198e+07 #moment of inertia [mm4], no embedded steel, therefore, only from concrete.
-        # Itr = 1.082e+8 this number includes deviated steels.
+        # pixelframeelement.Itr = 1.082e+8 #this number includes deviated steels.
 
         pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
         # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)

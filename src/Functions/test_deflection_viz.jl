@@ -40,7 +40,7 @@ x2 = ["Displacement [mm]", "Displacement [mm]"]
 y2 = ["P [N]", "P [N]"]
 axis_monitor1 = [Axis(ga[i,1], title = title_name1[i],ylabel = y1[i], xlabel = x1[i]) for i in 1:5]
 axis_monitor2 = [Axis(gb[i,1], title = title_name2[i],ylabel = y2[i], xlabel = x2[i], yticks = -400000.:2500:40000)  for i in 1:2]
-
+axis_monitor2[2].limits = (0,nothing, 0,nothing)
 scatter!(axis_monitor1[1], P, dps_history, color = :red)
 scatter!(axis_monitor1[2], P, fps_history, color = :red)
 scatter!(axis_monitor1[2], P, fc_history, color = :blue)

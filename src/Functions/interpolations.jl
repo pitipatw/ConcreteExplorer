@@ -1,5 +1,6 @@
 using CSV
 using DataFrames
+using AsapSections
 """
 function get_C, input area A and out put C from a csv file. 
 csv file dataformat is A,C
@@ -27,8 +28,17 @@ function get_C(A::Float64; test::Bool = false)
 
 end
 
+""" 
+    function get_C(pixelframeelement::PixelFrameElement, araa::Float64)
+Get compression depth of the section, given a compression area.
 """
-function get_Icrack input depth C output Icrack from a csv file. 
+function get_C(pixelframeelement::PixelFrameElement, area::Float64)
+    c = depth_from_area(pixelframeelement.compoundsection, area)
+    return c
+end 
+
+"""
+    function get_Icrack input depth C output Icrack from a csv file. 
 csv file dataformat is C,Icrack
 """
 function get_Icrack(C::Float64; test::Bool = false)
@@ -53,3 +63,20 @@ function get_Icrack(C::Float64; test::Bool = false)
         return nothing
     end
 end
+
+function get_Icrack(pixelframeelement::PixelFrameElement, c_depth::Float64)
+    compoundsection = pixelframeelement.compoundsection
+
+    c_depth_global = compoundsection.ymax - c_depth #global coordinate
+    new_sections = Vector{SolidSection}()
+    for sub_s in compoundsection.solids
+        sub_s_ymax = sub_s.ymax #global coordinate
+        sub_s_ymin = sub_s.ymin 
+        c_depth_local = sub_s_ymax - c_depth_global
+        if c_depth_local > 0
+            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
+            push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
+        end
+    end
+    return new_sections.Ix
+end 

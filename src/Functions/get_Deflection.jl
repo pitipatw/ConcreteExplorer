@@ -9,14 +9,13 @@ include("structuralelement.jl")
 Todo:
     add variable descriptions in the function.
     remove Mat, Sec, and f requirements.
-    get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Float64)
+    get_Deflection(pixelframeelement::PixelFrameElement, load::Float64)
 Return mid-span deflection of a simply supported pixelframe element
 """
-function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Float64;
-    loadstep::Float64=10.0)::Dict{String,Any}
+function get_Deflection(pixelframeelement::PixelFrameElement, load::Float64;
+    loadstep::Float64=10.0)
 
     @unpack fc′,Ec,Eps,fpy,em,es,em0,dps0,Ls,Ld,L,Aps,Atr,Itr,Zb,w,mg,fr,r,fpe,ϵpe,ϵce,Mdec,test = pixelframeelement
-    @show test
 
     Mat = Material(fc′, Ec, Eps, fpy)
     Sec = Section(em, es, em0, dps0, Ls, Ld, L, Aps, Atr, Itr, Zb)
@@ -39,7 +38,7 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
     δ_dev = 0
     Mi = 0
     # 4.448*8300.0 N
-    P = 0.0:loadstep:maximum_load
+    P = 0.0:loadstep:load
     M = P*Ls/2.0 #given M inputs
 
     #Assumption
@@ -68,12 +67,9 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
 
     #Based on figure 7 on the paper.
 
-    conv1 = 1
-    counter1 = 0
-    counter2 = 0
     for i in eachindex(M)
         Mi = M[i] 
-        Lc = getLc(Sec,Mcr,Mi)
+        Lc = clamp(L-2*Ls*Mcr/Mi, L-2*Ls, Inf)
 
         counter1 = 0
         conv1 = 1
@@ -83,8 +79,7 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                 println("Warning: 1st iteration did not converge")
                 break
             end
-            #assume value of Itr and fps
-
+            
             conv2 = 1
             counter2 = 0
             while conv2 > 1e-3
@@ -94,15 +89,14 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                     println("Warning: 2nd iteration did not converge")
                     break
                 end
+                #assume value of Itr and fps
                 Ωc = getΩc(Ω, Icr, Lc, Sec)
-                # ps_force_i = Aps*fps
-
                 c = 10.0 #dummy
-                conv_c = 1 
-                counter_c = 0 
-                while conv_c > 1e-3 
-                    counter_c += 1
-                    if counter_c > 1000
+                conv_3 = 1 
+                counter_3 = 0 
+                while conv_3 > 1e-3 
+                    counter_3 += 1
+                    if counter_3 > 1000
                         println("Warning: 3rd iteration did not converge")
                         break
                     end
@@ -110,12 +104,21 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                     Ac_req = Mi/(dps-c/2)/(0.85*fc′)
                 
                     # Ac_req = ps_force_i /0.85/fc′
-                    new_c = get_C(Ac_req, test = test)
-                    conv_c = abs(new_c - c)/new_c
+                    if test
+                        new_c = get_C(Ac_req, test = test)
+                    else 
+                        new_c = get_C(pixelframeelement, Ac_req)
+                    end
+
+                    conv_3 = abs(new_c - c)/new_c
                     c = new_c
                 end
                 #calculate Icr
-                Icr_calc = get_Icrack(c, test = test)
+                if test
+                    Icr_calc = get_Icrack(c, test = test)
+                else 
+                    Icr_calc = get_Icrack(pixelframeelement, c)
+                end
 
                 conv2 = abs(Icr_calc - Icr)/Icr_calc
 
@@ -155,7 +158,10 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
     "P" => P,
     "Mcr" => Mcr, 
     "Mdec" => Mdec)
-    
-    return outputs
+    if test
+        return outputs
+    else 
+        return dis_history, P
+    end
 end 
 
