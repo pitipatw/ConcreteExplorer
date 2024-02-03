@@ -72,14 +72,14 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         # is ~ 150 MPa. Currently 140 MPa :)
 
         # PixelFrame section/element properties
+        centroid_to_top = 91.5 #[mm]
         pixelframeelement.em = 230.0 # Eccentricity at the middle of the member [mm]
         pixelframeelement.es = 0.0 # Eccentricity at the support of the member   [mm]
-        pixelframeelement.em0 = pixelframeelement.em # Initial eccentricity at the midspan        [mm]
+        pixelframeelement.em0 = 230.0 # Initial eccentricity at the midspan        [mm]
 
-        centroid_to_top = 91.5 #[mm]
         pixelframeelement.dps0 = centroid_to_top + pixelframeelement.em0 # Initial distance from the top to the point of application of the load [mm]
         pixelframeelement.Ls = 502.7 # Distance from support to the first load point [mm]
-        pixelframeelement.Ld = pixelframeelement.Ls    # Distance from support to the first deviator [mm]
+        pixelframeelement.Ld = 502.7 # Distance from support to the first deviator [mm]
         pixelframeelement.L = 2000.0 # Total length of the member [mm]
         # two 1/4" bars with 1200 lb capacity
         pixelframeelement.Aps = 2.0 * (0.25 * 25.4)^2 * pi / 4.0 # Total area of the post tensioned steel [mm2]
@@ -92,21 +92,19 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
         pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
         # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)
 
-
         #forces
         pixelframeelement.w = pixelframeelement.Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
         pixelframeelement.mg = pixelframeelement.w * pixelframeelement.L^2 / 8.0 # Moment due to selfweight [Nmm]
         pixelframeelement.fr = 0.7 * sqrt(pixelframeelement.fc′) # Concrete cracking strenght [MPa]
         pixelframeelement.r = sqrt(pixelframeelement.Itr / pixelframeelement.Atr) # Radius of gyration [mm]
         pixelframeelement.ps_force = 890.0/sind(24.0) # Post tensioning force [N]
-        
         pixelframeelement.Mdec = pixelframeelement.ps_force*pixelframeelement.em
         pixelframeelement.concrete_force = pixelframeelement.ps_force*cos(24.0*pi/180.0) # 
         pixelframeelement.fpe = pixelframeelement.ps_force/pixelframeelement.Aps # Effective post tensioning stress [MPa] ***will input the one on the test day***
         pixelframeelement.ϵpe = pixelframeelement.fpe / pixelframeelement.Eps # Effective post tensioning strain [mm/mm]
         #find moment due to the applied force.
         pixelframeelement.ϵce = pixelframeelement.ps_force*pixelframeelement.em/pixelframeelement.Zb/pixelframeelement.Ec - pixelframeelement.concrete_force/pixelframeelement.Atr/pixelframeelement.Ec # effetive strain in the concrete [mm/mm]
-
+        #for using test setup
         pixelframeelement.test = true
         return pixelframeelement
     end

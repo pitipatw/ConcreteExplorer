@@ -8,17 +8,20 @@ include("structuralelement.jl")
 """
 Todo:
     add variable descriptions in the function.
+    remove Mat, Sec, and f requirements.
     get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Float64)
 Return mid-span deflection of a simply supported pixelframe element
 """
 function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Float64;
-    loadstep::Float64=10.0)
+    loadstep::Float64=10.0)::Dict{String,Any}
 
     @unpack fc′,Ec,Eps,fpy,em,es,em0,dps0,Ls,Ld,L,Aps,Atr,Itr,Zb,w,mg,fr,r,fpe,ϵpe,ϵce,Mdec,test = pixelframeelement
-    
+    @show test
+
     Mat = Material(fc′, Ec, Eps, fpy)
     Sec = Section(em, es, em0, dps0, Ls, Ld, L, Aps, Atr, Itr, Zb)
     f   = Loads(w, mg, fr, r, fpe, ϵpe, ϵce, Mdec)
+
     #Could do
     # if test
     #     get_Deflection(pixelframeelement)
@@ -49,7 +52,7 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
     Ω =  getOmega(Sec)
     #we could do Mcr = 0 , becuase we crack at the begining anyway. 
     #but it happens to break the model instead. 0.00001 (very small) also breaks
-    Mcr = getMcr(Mat, Sec, f, Ω)
+    @show Mcr = getMcr(Mat, Sec, f, Ω)
 
 
     #output containers
@@ -71,23 +74,20 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
     for i in eachindex(M)
         Mi = M[i] 
         Lc = getLc(Sec,Mcr,Mi)
-        # Lc = L/2
-        # println(Lc)
-        # break
+
         counter1 = 0
         conv1 = 1
-        while conv1 > 1e-6
+        while conv1 > 1e-3
             counter1 += 1 
             if counter1 > 1000
                 println("Warning: 1st iteration did not converge")
                 break
             end
-            # println("HI")
             #assume value of Itr and fps
 
             conv2 = 1
             counter2 = 0
-            while conv2 > 1e-6
+            while conv2 > 1e-3
                 # println("counter")
                 counter2 += 1 
                 if counter2 > 1000
@@ -100,7 +100,7 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                 c = 10.0 #dummy
                 conv_c = 1 
                 counter_c = 0 
-                while conv_c > 1e-6 
+                while conv_c > 1e-3 
                     counter_c += 1
                     if counter_c > 1000
                         println("Warning: 3rd iteration did not converge")
@@ -110,12 +110,12 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                     Ac_req = Mi/(dps-c/2)/(0.85*fc′)
                 
                     # Ac_req = ps_force_i /0.85/fc′
-                    new_c = get_C(Ac_req)
+                    new_c = get_C(Ac_req, test = test)
                     conv_c = abs(new_c - c)/new_c
                     c = new_c
                 end
                 #calculate Icr
-                Icr_calc = get_Icrack(c)
+                Icr_calc = get_Icrack(c, test = test)
 
                 conv2 = abs(Icr_calc - Icr)/Icr_calc
 
@@ -123,22 +123,13 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
                 
             end
         
-            # println("Icr = ", Icr)
-            # println("Ac_req ", Ac_req)
-            # println("c: ", c)
-            # @show Mcr , Mdec, Mi , Icr, Itr
             Ie = getIe(Mcr, Mdec, Mi, Icr, Itr)
-            # println("Ie/Icr" , Ie/Icr)
             δ_mid, δ_dev , e  = getDelta(Mat, Sec, f, Ie, Mi, em,fps)
             dps = dps0 - (δ_mid - δ_dev)
-            fc = fps/Eps*c/(dps-c) + Mi/Itr*c  #concrete stress
-            # println("fc: ", fc)
-            # @assert fc <= 0.003
+            fc = fps/Eps*c/(dps-c) + Mi/Itr*c  #concrete stress at top fiber
             fps_calc = getFps2(Mat, Sec, f , Ωc, c, dps, fc)
             conv1 = abs(fps_calc - fps) / fps
             fps = fps_calc
-            #plot convergence of fps, icr and dps using Makie
-
         end
 
         # δmid = getDeltamid()
@@ -151,25 +142,20 @@ function get_Deflection(pixelframeelement::PixelFrameElement, maximum_load::Floa
         dis_history[i] = δ_mid
         fc_history[i]  = fc
         dis_dev_history[i] = δ_dev
-
-
-
-        
     end
 
-    outputs = [fps_history,
-    dps_history,
-    Icr_history,
-    Ie_history,
-    c_history,
-    dis_history, 
-    fc_history,
-    dis_dev_history]
+    outputs = Dict("fps_history" => fps_history,
+    "dps_history" => dps_history,
+    "Icr_history" => Icr_history,
+    "Ie_history" => Ie_history,
+    "c_history" =>  c_history,
+    "dis_history" => dis_history,
+    "fc_history" =>  fc_history,
+    "dis_dev_history" => dis_dev_history,
+    "P" => P,
+    "Mcr" => Mcr, 
+    "Mdec" => Mdec)
     
     return outputs
 end 
 
-
-#test
-element1 = PixelFrameElement()
-get_Deflection(element1, 4.448*8300)

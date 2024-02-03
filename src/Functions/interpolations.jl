@@ -5,7 +5,6 @@ function get_C, input area A and out put C from a csv file.
 csv file dataformat is A,C
 """
 function get_C(A::Float64; test::Bool = false)
-
     if test
     #read the csv file
     filename = joinpath(@__DIR__,"table_AtoC.csv") #Make sure you got csv in the name
