@@ -62,10 +62,13 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
 #@unpack compoundsection, fc′, as, fpe, dps, L = pixelframesection
 #as = sum(as)
 #fpe = fpe[1]
-
+    if dps == 0.0
+        return 0.0
+    end 
     #Pure Moment Capacity
     #concrete area
     ac = compoundsection.area
+
     #From ACI318M-19 Table: 20.3.2.4.1
     ρ = as / ac #reinforcement ratio (Asteel/Aconcrete)
     fps1 = fpe + 70 + fc′ / (100 * ρ) #
@@ -78,33 +81,38 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     if acomp > ac 
         println("Acomp exceeds Ac, using Ac instead")
         acomp = ac
+        #re-calculate fps 
+        fps = acomp*0.85*fc′/as 
+        @assert acomp = as * fps / (0.85 * fc′)
     end
-    # @show acomp/ac
-    #rebar position measure from 0.0 (centroid) down, relative value
-    rebarpos = -dps
-    #depth is from the top most of the section
-    c_depth = depth_from_area(compoundsection,acomp,show_stats = false ) #local
-    ymax = compoundsection.ymax #global coordinate
 
-    c_depth_global = ymax - c_depth #global coordinate
+
+    #depth is from the top most of the section
+    c = depth_from_area(compoundsection,acomp,show_stats = false ) #local
+
+    #find depth at global coordinates
+    ymax = compoundsection.ymax #global coordinate
+    c_depth_global = ymax - c #global coordinate
 
     new_sections = Vector{SolidSection}()
     for sub_s in compoundsection.solids
         sub_s_ymax = sub_s.ymax #global coordinate
-        sub_s_ymin = sub_s.ymin 
+        sub_s_ymin = sub_s.ymin #global coordinate
         c_depth_local = sub_s_ymax - c_depth_global
-        if c_depth_local > 0
-            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
+        if c_depth_local > 0 #this means, c_depth_global is below the top part of the subsection.
+            c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin) #it can only go as far as the depth of the section.
             push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
         end
     end
 
     #Recheck with concrete.
     #check compression strain, make sure it's not more than 0.003
-    # c = depth
-    c = c_depth
     ϵs = fps / Ep
+    #rebar position measure from 0.0 (centroid) down, relative value
+    rebarpos = 0.0 - dps  #Centroud at 0.0, move downward dps
     d = ymax-rebarpos
+    @assert d > 0
+    @assert d > c
     ϵc = c * ϵs / (d - c)
 
     if ϵc > 0.003
@@ -114,43 +122,45 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
 
         #first find depth based on the 0.003 strain at the top
 
-        c = L/2 #first guess
         tol = 1
         counter = 0 
-        while tol > 0.001  #precision problem, if tol is too rough, new ϵc wont be exactly 0.003
+        while tol > 1e-3  #precision problem, if tol is too rough, new ϵc wont be exactly 0.003
             counter  +=1 
             if counter > 1000
                 println("Counter exceeds limit")
+                @show fc′, as, dps
                 break
             end
             #numerical value error, let it slightly less than 0.003
             ϵs_new = 0.0029*(d - c) / c
             fps_new = ϵs_new * Ep
-            acomp = as * fps_new / (0.85 * fc′)
+            #limit the compression area between 0 and 0.99 of the actual section.
+            acomp = clamp(as * fps_new / (0.85 * fc′),1.0, 0.99*compoundsection.area)
+            # @show compoundsection.area
             if acomp <0 
-                println(acomp)
+                @show acomp
+                @show fps_new
+
                 @show c
                 @show d
                 @show L
 
             end
-            c_depth = depth_from_area(compoundsection,acomp,rel_tol = 1e-4,show_stats = false )
-            tol = abs(c_depth - c)/c
-            c = c_depth
+            c_new = depth_from_area(compoundsection,acomp,rel_tol = 1e-3,show_stats = false )
+            tol = abs(c_new - c)/c
+            c = c_new
             ϵs = ϵs_new
-
         end
         #making sure that ϵc is <= 0.003
         ϵc = c * ϵs/ (d - c)
         # @show ϵc
         @assert ϵc <= 0.003
 
-        c_depth_global = ymax - c_depth
+        c_depth_global = ymax - c
         new_sections = Vector{SolidSection}()
         for sub_s in compoundsection.solids
             sub_s_ymax = sub_s.ymax
             sub_s_ymin = sub_s.ymin 
-
             c_depth_local = sub_s_ymax - c_depth_global
             if c_depth_local > 0
                 c_depth_local = clamp(sub_s_ymax - c_depth_global, 0, sub_s_ymax - sub_s_ymin)
@@ -158,7 +168,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
             end
         end
 
-            #check es again to see if es can 
+        #check es again to see if es can 
         # @show ϵs
         @assert ϵs >= 0.002
 

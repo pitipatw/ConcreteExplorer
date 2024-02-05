@@ -122,7 +122,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB1_1_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB5_2_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)
