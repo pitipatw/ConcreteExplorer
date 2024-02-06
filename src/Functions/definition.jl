@@ -2,7 +2,7 @@
 
 # Constructing types
 # Material Properties
-mutable struct Material  
+mutable struct Material
     fc′::Float64 # Concrete strength [MPa] ****Should update on the test day using cylinder test***
     Ec::Float64 # MPa  ACI fc-> Concrete modulus relationship [MPa]
     Eps::Float64 #Post tensioning steel modulus [MPa]

@@ -129,6 +129,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
             if counter > 1000
                 println("Counter exceeds limit")
                 @show fc′, as, dps
+                return 0.0
                 break
             end
             #numerical value error, let it slightly less than 0.003
