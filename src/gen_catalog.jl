@@ -52,16 +52,16 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         @assert length(range_fc′) == length(range_fR1) == length(range_fR3)
 
         range_as = [99.0 * 2, 140.0 * 2] # x2 are for 2 ropes on 2 sides
-        range_dps = vcat(0.0:10:300) #mm either in the middle, or 5cm shifted.
-        range_fpe = (0.00:0.025:0.7) * 1860.0 #MPa
-        range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+        range_dps = vcat(0.0:20:300) #mm either in the middle, or 5cm shifted.
+        range_fpe = (0.00:0.050:0.7) * 1860.0 #MPa
+        range_type = [3.0] #2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     else
         println("Error Invalid test case")
         return nothing
     end
 
     n = length.([range_fc′, range_as, range_dps, range_fpe, range_type])
-    ntotal = prod(n)
+    @show ntotal = prod(n)
     #Pre allocating results
     results = Matrix{Float64}(undef, prod(n), 9 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
@@ -122,7 +122,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB6_1_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB6_2_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)

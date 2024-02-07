@@ -8,7 +8,7 @@ using InteractiveUtils
 begin
 	println(pwd())
 	using Pkg
-	Pkg.activate("..")
+	# Pkg.activate("..")
 	using CSV
 	using DataFrames
 	using JSON
@@ -67,8 +67,8 @@ Load the design catalog
 
 # ╔═╡ f074d05a-4a52-485f-b0cb-4a79a6fa42b3
 begin
-	catalog = CSV.read("Catalogs/FEB6_1_catalog_static.csv", DataFrame); 
-	sort!(catalog, [:carbon, :fc′, :as, :dps])
+	catalog = CSV.read("src/Catalogs/FEB6_2_catalog_static.csv", DataFrame); 
+	# sort!(catalog, [:carbon, :fc′, :as, :dps])
 	println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
 	println(catalog[1:20,:])
 end
@@ -94,6 +94,10 @@ let
 
 	println(demands[1:10,:])
 end
+
+# demands_all = demands
+# 
+# demands = demands[1:16, :]
 
 # ╔═╡ d413107f-6aeb-4a94-a875-3907d240a633
 md"""
@@ -129,11 +133,11 @@ println("After Modifying the Indices")
 @show new_max_e_idx = maximum(demands[!, "e_idx"]);
 @show new_max_s_idx = maximum(demands[!, "s_idx"]);
 types = unique(demands[!, :type])
-global mapping = Dict(types .=> 1:1:length(types))
+global color_mapping = Dict(types .=> 1:1:length(types))
 	
 f_indices_check = Figure(size = (800,500))
 ax_indices_check = Axis(f_indices_check[1,1], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30)
-scatter!(ax_indices_check, demands[!, "idx"], demands[!, "e_idx"], color = [mapping[t] for t in demands[!,:type]])
+scatter!(ax_indices_check, demands[!, "idx"], demands[!, "e_idx"], color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check 
 end
 	
@@ -171,12 +175,11 @@ ax_section_indices_check_mod = Axis(f_indices_check_mod[1,2], xlabel = "Global I
 title = "Section indices")
 ax_dps = Axis(f_indices_check_mod[1,3], xlabel = "Global Index", ylabel = "dps", xticks = 0:20:250,
 title = "Section indices")
-scatter!(ax_indices_check_mod, demands[!, "idx"], demands[!, "e_idx"],color = [mapping[t] for t in demands[!,:type]])
-scatter!(ax_section_indices_check_mod, demands[!, "idx"], demands[!, "s_idx"],color = [mapping[t] for t in demands[!,:type]])
-scatter!(ax_dps, demands[!, "idx"], demands[!, "ec_max"].*1000,color = [mapping[t] for t in demands[!,:type]])
+scatter!(ax_indices_check_mod, demands[!, "idx"], demands[!, "e_idx"],color = [color_mapping[t] for t in demands[!,:type]])
+scatter!(ax_section_indices_check_mod, demands[!, "idx"], demands[!, "s_idx"],color = [color_mapping[t] for t in demands[!,:type]])
+scatter!(ax_dps, demands[!, "idx"], demands[!, "ec_max"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check_mod 
 end
-
 # ╔═╡ 66fea01a-ce03-4996-bd91-b6d9e91c5305
 md"""
 Visualize the demand points
@@ -199,7 +202,7 @@ ax5 = Axis(f1[3,1], xlabel = "Moment [kNm]")
 ax6 = Axis(f1[3,2], xlabel = "Moment [kNm]")
 
 
-scatter!(ax1, demands[!, :mu], demands[!,:vu], color = [mapping[t] for t in demands[!,:type]], label = demands[!, :type])
+scatter!(ax1, demands[!, :mu], demands[!,:vu], color = [color_mapping[t] for t in demands[!,:type]], label = demands[!, :type])
 scatter!(ax1, catalog[!, :Mu], catalog[!, :Vu], colormap = :thermal , color = collect(catalog[!, :fc′]), marker = '.', alpha = 0.1, transparency = true, markersize = 5)
 
 scatter!(ax2, catalog[!, :Mu], catalog[!, :Vu], colormap = :thermal , color = collect(catalog[!, :fc′]), marker = '.', alpha = 0.5, transparency = true, markersize = 5)
@@ -252,11 +255,11 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
         global feasible_sections = filter([:Pu, :Mu, :Vu, :dps] => (x1, x2, x3, x4) ->
                 x1 >= pu &&
                 x2 >= mu &&
-                x3 >= vu && 
-                x4 <= ec_max * 1200,
+                x3 >= vu &&
+                x4 <= ec_max * 1000,
             catalog
         )
-
+		# @show minimum(feasible_sections[:, :Mu])
         if size(feasible_sections)[1] == 0 #if the number of feasible results = 0
             println(feasible_sections[!, :ID])
             println("section $sn: element $en")
@@ -264,6 +267,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
             demands[i, "total_results"] = 0
             # println(outr)
         else
+			@show minimum(feasible_sections[!, :Mu])
             all_feasible_sections[i] = feasible_sections[!, :ID]
             demands[i, "total_results"] = length(feasible_sections[!, :ID])
             # println(outr)
@@ -333,6 +337,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
         
         #get the feasible designs for the middle section
         feasible_idx = all_feasible_sections[sections[mid]]
+		println(size(feasible_idx)[1], " available sections")
 
         #catalog was already sorted, so I think we can leave this part, just filter, to save time.
         mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, :dps])
@@ -342,21 +347,21 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
         #if yes, keep it.
 
         #select each design, check if as and fpe exist for the the section
-        d_idx = 0 
+        global final_d_idx = 0 
 		total_mid_catalog = size(mid_catalog)[1]
-		
-        for d_idx in 1:size(mid_catalog)[1]
+		global found_all = true #make it a global variable.
+        for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
             d = mid_catalog[d_idx, :]
 			found_all = true
             # all_as  = true
             # all_fpe = true
             serviceability_check = true
-
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
-                #check if the design is available in that section.
+				println("Check section $s")
                 #if not, go to the next choice.
 
                 #If matching fc′, make sure that the fR1 and fR3 are also matched.
+
                 # if !(d[:fc′] ∈ catalog[all_feasible_sections[s], :fc′])
 				#also check the fR1 and fR3
                 #     all_fc′ = false
@@ -367,9 +372,16 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				
 				if !check_as || !check_fpe #not found, move to the next design of the mid section.
                     found_all = false
+					println("Section $s fails, restarting...")
                     break
                 end
             end
+
+			if found_all
+				println("Found all at element $i")
+				final_d_idx = d_idx
+				break
+			end
         end
 
 		#If the loop finishes without false, that's a hit! Otherwise, not found
@@ -379,126 +391,262 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			elements_designs[i] = [0]
     		sections_to_designs[elements_to_sections] .= [0.]
 		else
+			println("making element $i")
 	        #get the first one, they will appear in the entire thing anyway.
 	        # this_fc′ = mid_catalog[global_d, :fc′]
 			# this_fR1 = mid_catalog[global_d, :fR1]
 			# this_fR3 = mid_catalog[global_d, :fR3]
-	
-	        this_fpe = mid_catalog[global_d, :fpe] 
-	        this_as = mid_catalog[global_d, :as]
+			println("final_d_idx is $final_d_idx")
+	        @show this_fpe = mid_catalog[final_d_idx, :fpe] 
+	        @show this_as = mid_catalog[final_d_idx, :as]
 	
 	        sections_designs = Vector{Vector}(undef, ns)
 	        for is in eachindex(elements_to_sections[i])
 	            #current section index
-	            s = elements_to_sections[i][is]
+	            @show s = elements_to_sections[i][is]
 	
-	            feasible_idx = all_feasible_sections[s]
-
-				
+	            feasible_idx = all_feasible_sections[s] # all feasible sections for this section.
+				println("Feasible Catalog")
+				@show catalog[feasible_idx, :]
 	            # fc′_fpe_as(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
 	            fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
 	
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
-	            this_catalog = filter([:fpe, :as] => fpe_as, catalog[output_results[s], :])
+	            @show this_catalog = filter([:fpe, :as] => fpe_as, catalog[feasible_idx, :])
 	
-	            sort!(this_catalog, [:carbon, :dps]) #the lowest ccarbon will be the first index.
+	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon will be the first index.
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
-				
 	            sections_designs[is] = collect(catalog[select_ID, :])
 	        end
 
-			#Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
-	        #Create a pixelframeelement and/or section here with the given parameters 
-	        L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
-	        compoundsection =  make_Y_layup_section(L, t, Lc)
-	        pixelframeelement = PixelFrameElement() 
-			#Modified the fields inside pixelframeelement so they are met with the current configuration.
-			pixelframeelement.compoundsection = compoundsection
-	        Le = ns*500.0 #500 mm per section.
+			# #Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
+	  #       #Create a pixelframeelement and/or section here with the given parameters 
+	  #       L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
+	  #       compoundsection =  make_Y_layup_section(L, t, Lc)
+	  #       pixelframeelement = PixelFrameElement() 
+			# #Modified the fields inside pixelframeelement so they are met with the current configuration.
+			# pixelframeelement.compoundsection = compoundsection
+	  #       Le = ns*500.0 #500 mm per section.
 	
-	        #could do a case where input only the variables -> the dependent variables come later.
-	        pixelframeelement.fc′ = this_fc′ # Concrete strength [MPa] ****Should update on the test day using cylinder test***
-	        # Ec = 4700.0*sqrt(fc′) # MPa  ACI fc-> Concrete modulus relationship [MPa]
-	        pixelframeelement.Ec = 58000.0 # MPa  from the cylinder test
-	        pixelframeelement.Eps = 70000.0 #Post tensioning steel modulus [MPa]
-	        pixelframeelement.fpy = 0.002 * pixelframeelement.Eps #MPa  
-	        #Safe load on the website https://www.engineeringtoolbox.com/wire-rope-strength-d_1518.html 
-	        # is ~ 150 MPa. Currently 140 MPa :)
+	  #       #could do a case where input only the variables -> the dependent variables come later.
+	  #       pixelframeelement.fc′ = this_fc′ # Concrete strength [MPa] ****Should update on the test day using cylinder test***
+	  #       # Ec = 4700.0*sqrt(fc′) # MPa  ACI fc-> Concrete modulus relationship [MPa]
+	  #       pixelframeelement.Ec = 58000.0 # MPa  from the cylinder test
+	  #       pixelframeelement.Eps = 70000.0 #Post tensioning steel modulus [MPa]
+	  #       pixelframeelement.fpy = 0.002 * pixelframeelement.Eps #MPa  
+	  #       #Safe load on the website https://www.engineeringtoolbox.com/wire-rope-strength-d_1518.html 
+	  #       # is ~ 150 MPa. Currently 140 MPa :)
 	
-	        # PixelFrame section/element properties
-	        centroid_to_top = 100.0 #[mm] ~half of 205mm
-	        pixelframeelement.em = mid_catalog[global_d, :dps]# Eccentricity at the middle of the member [mm]
-	        pixelframeelement.es = 0.0 # Eccentricity at the support of the member   [mm]
-	        pixelframeelement.em0 = mid_catalog[global_d, :dps] # Initial eccentricity at the midspan        [mm]
-			# Initial distance from the top to the point of application of the 		load [mm]
-	        pixelframeelement.dps0 = centroid_to_top + pixelframeelement.em0 
-	        pixelframeelement.Ls = Le/4 # Distance from support to the first load point [mm]
-	        pixelframeelement.Ld = Le/4 # Distance from support to the first deviator [mm]
-	        pixelframeelement.L = Le # Total length of the member [mm]
-	        # two 1/4" bars with 1200 lb capacity
-	        pixelframeelement.Aps = this_as # Total area of the post tensioned steel [mm2]
-	        #Pure concrete area = 18537.69 mm2
-	        #Transformed steel area = 347.96 mm2 
-			# Transformed area of the cross section [mm2] (= Concrete area if there is no embedded rebars)
-	        pixelframeelement.Atr = compoundsection.area 
-	        pixelframeelement.Itr = compoundsection.Ix #moment of inertia [mm4], no embedded steel, therefore, only from concrete.
-	        # pixelframeelement.Itr = 1.082e+8 #this number includes deviated steels.
-		    # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
-	        pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top 
-	        # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)
+	  #       # PixelFrame section/element properties
+	  #       centroid_to_top = 100.0 #[mm] ~half of 205mm
+	  #       pixelframeelement.em = mid_catalog[global_d, :dps]# Eccentricity at the middle of the member [mm]
+	  #       pixelframeelement.es = 0.0 # Eccentricity at the support of the member   [mm]
+	  #       pixelframeelement.em0 = mid_catalog[global_d, :dps] # Initial eccentricity at the midspan        [mm]
+			# # Initial distance from the top to the point of application of the 		load [mm]
+	  #       pixelframeelement.dps0 = centroid_to_top + pixelframeelement.em0 
+	  #       pixelframeelement.Ls = Le/4 # Distance from support to the first load point [mm]
+	  #       pixelframeelement.Ld = Le/4 # Distance from support to the first deviator [mm]
+	  #       pixelframeelement.L = Le # Total length of the member [mm]
+	  #       # two 1/4" bars with 1200 lb capacity
+	  #       pixelframeelement.Aps = this_as # Total area of the post tensioned steel [mm2]
+	  #       #Pure concrete area = 18537.69 mm2
+	  #       #Transformed steel area = 347.96 mm2 
+			# # Transformed area of the cross section [mm2] (= Concrete area if there is no embedded rebars)
+	  #       pixelframeelement.Atr = compoundsection.area 
+	  #       pixelframeelement.Itr = compoundsection.Ix #moment of inertia [mm4], no embedded steel, therefore, only from concrete.
+	  #       # pixelframeelement.Itr = 1.082e+8 #this number includes deviated steels.
+		 #    # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
+	  #       pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top 
+	  #       # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)
 	
-	        #forces
-	        pixelframeelement.w = pixelframeelement.Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
-	        pixelframeelement.mg = pixelframeelement.w * pixelframeelement.L^2 / 8.0 # Moment due to selfweight [Nmm]
-	        pixelframeelement.fr = 0.7 * sqrt(pixelframeelement.fc′) # Concrete cracking strenght [MPa]
-	        pixelframeelement.r = sqrt(pixelframeelement.Itr / pixelframeelement.Atr) # Radius of gyration [mm]
-	        pixelframeelement.ps_force = pixelframeelment.Aps*this_fpe # Post tensioning force [N]
-	        pixelframeelement.Mdec = pixelframeelement.ps_force*pixelframeelement.em
-	        pixelframeelement.concrete_force = pixelframeelement.ps_force*cos(24.0*pi/180.0) # should use actual value 
-	        pixelframeelement.fpe = pixelframeelement.ps_force/pixelframeelement.Aps # Effective post tensioning stress [MPa] 
-	        pixelframeelement.ϵpe = pixelframeelement.fpe / pixelframeelement.Eps # Effective post tensioning strain [mm/mm]
-	        #find moment due to the applied force.
-	        pixelframeelement.ϵce = pixelframeelement.ps_force*pixelframeelement.em/pixelframeelement.Zb/pixelframeelement.Ec - pixelframeelement.concrete_force/pixelframeelement.Atr/pixelframeelement.Ec # effetive strain in the concrete [mm/mm]
-	        #for using test setup
-	        pixelframeelement.test = false #This is not the half-scale test beam anymore.
+	  #       #forces
+	  #       pixelframeelement.w = pixelframeelement.Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
+	  #       pixelframeelement.mg = pixelframeelement.w * pixelframeelement.L^2 / 8.0 # Moment due to selfweight [Nmm]
+	  #       pixelframeelement.fr = 0.7 * sqrt(pixelframeelement.fc′) # Concrete cracking strenght [MPa]
+	  #       pixelframeelement.r = sqrt(pixelframeelement.Itr / pixelframeelement.Atr) # Radius of gyration [mm]
+	  #       pixelframeelement.ps_force = pixelframeelment.Aps*this_fpe # Post tensioning force [N]
+	  #       pixelframeelement.Mdec = pixelframeelement.ps_force*pixelframeelement.em
+	  #       pixelframeelement.concrete_force = pixelframeelement.ps_force*cos(24.0*pi/180.0) # should use actual value 
+	  #       pixelframeelement.fpe = pixelframeelement.ps_force/pixelframeelement.Aps # Effective post tensioning stress [MPa] 
+	  #       pixelframeelement.ϵpe = pixelframeelement.fpe / pixelframeelement.Eps # Effective post tensioning strain [mm/mm]
+	  #       #find moment due to the applied force.
+	  #       pixelframeelement.ϵce = pixelframeelement.ps_force*pixelframeelement.em/pixelframeelement.Zb/pixelframeelement.Ec - pixelframeelement.concrete_force/pixelframeelement.Atr/pixelframeelement.Ec # effetive strain in the concrete [mm/mm]
+	  #       #for using test setup
+	  #       pixelframeelement.test = false #This is not the half-scale test beam anymore.
 	
-	        #for the current stage of the model,
-	        #we will have 2 deviators, with interpolated 1/4 of the length of the element.
-	        #with this, <Need proved, but this should be more conservative???>. Less post tensioned than the actual beam.
-	        #Current PixelFrameSize
+	  #       #for the current stage of the model,
+	  #       #we will have 2 deviators, with interpolated 1/4 of the length of the element.
+	  #       #with this, <Need proved, but this should be more conservative???>. Less post tensioned than the actual beam.
+	  #       #Current PixelFrameSize
 	        
-	        load_m = 4*demands[mid, :mu]/Le*1000 #N
-	        load_v = demands[mid, :vu]*1000
+	  #       load_m = 4*demands[mid, :mu]/Le*1000 #N
+	  #       load_v = demands[mid, :vu]*1000
 	
-	        load = load_m > load_v ? load_m : load_v
-	        # @show load 
-	        dis_history, P =  get_Deflection(pixelframeelement, load, loadstep = 1000)
-			@show length(dis_history)
-	        δ = dis_history[end]
+	  #       load = load_m > load_v ? load_m : load_v
+	  #       # @show load 
+	  #       dis_history, P =  get_Deflection(pixelframeelement, load, loadstep = 1000)
+			# @show length(dis_history)
+	  #       δ = dis_history[end]
 	
-	        elements_designs[i] = [sections_designs, δ, δ/(Le/240)]
+	        # elements_designs[i] = [sections_designs, δ, δ/(Le/240)]
+			elements_designs[i] = sections_designs #, δ, δ/(Le/240)]
+
 	
 	    end
-		#at this point, we have all of the designs of the elements!!!
-	    for i in ne
-	        sections = elements_to_sections[i]
-	        for design in eachindex(elements_designs[i])
-	            sections_to_designs[sections[design]] = elements_designs[i][design]
+		
+	end
+	#at this point, we have all of the designs of the elements!!!
+		# println(typeof(sections_to_designs))
+	    for i in ne #loop each element
+			#i is an index of an element.
+	        @show sections = elements_to_sections[i] #sections numbers in that element.
+			#maximum sections 
+			# max_section = maximum(sections)
+			@show elements_designs[i]
+	        for design_idx in eachindex(sections)
+				# @show typeof(elements_designs[i])
+				# @show typeof(elements_designs[i][design_idx])
+				# println(elements_designs[i][design_idx])
+
+				# @show sections[design_idx]
+				# @show sections_to_designs[sections[design_idx]]
+	            sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
 	        end
 	    end
-	end
     return elements_designs, elements_to_sections, sections_to_designs
 end
 
 # ╔═╡ df8a7202-49c9-4e8a-81eb-aa63cc410888
-all_feasible_sections= filter_demands!(demands,catalog)
+let
+global all_feasible_sections= filter_demands!(demands,catalog)
+end
 
-# ╔═╡ e06e8d59-7c7f-454a-bac5-2cccbe525f09
-println(all_feasible_sections)
+#select a section to see the available designs
+section_number = 1
+figure_check_section = Figure(size = (500,500))
+ax_section = Axis(figure_check_section[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = string(section_number))
+for d in 1:length(all_feasible_sections[section_number])
+	scatter!(ax_section, catalog[d,:Mu], catalog[d,:Vu])
+end
+
+for i in 1:length(all_feasible_sections)
+	println("Section $i")
+	println(length(all_feasible_sections[i]))
+end
+
+# ╔═╡ 0176e9c5-de48-4163-9cfb-b909177869dc
+# println(all_feasible_sections)
 
 # ╔═╡ 5df9ac50-bdef-4cfb-845f-8d84b9be1ef8
 elements_designs, elements_to_sections, sections_to_designs  = find_optimum(all_feasible_sections, demands)
+println(elements_designs)
+open("src/Results/designs_results_06_02.json","w") do f
+    JSON.print(f, elements_designs)
+end
 
+
+open("src/Results/sections_to_designs_06_02.json","w") do f
+    JSON.print(f, sections_to_designs)
+end
+
+using Makie, GLMakie, CairoMakie
+using JSON
+using DataFrames, CSV
+
+designs = JSON.parsefile(joinpath(@__DIR__,"Results/designs_results_06_02.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+ne = length(designs)
+println("There are $ne elements.")
+
+function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
+
+
+	sections = elements_to_sections[element_number]
+	element_number = string(element_number)
+	
+	L = 205
+	tendon_profile = [i[5] for i in designs[element_number]]
+	axial_capacity  = [i[7] for i in designs[element_number]]
+	moment_capacity = [i[8] for i in designs[element_number]]
+	shear_capacity = [i[9] for i in designs[element_number]]
+	
+	
+	axial_demand  = [ demands[i,"pu"] for i in sections]
+	moment_demand = [ demands[i,"mu"] for i in sections]
+	shear_demand  = [ demands[i,"vu"] for i in sections]
+	
+	
+	#plot center around x = 0 
+	@show n = length(tendon_profile)
+	xmax = div(n,2)*500
+	@show res = mod(n+1,2)*250
+	@show x_range = -xmax+res:500:xmax-res
+	
+	
+	
+	f1 = Figure(size = (1200,600))
+	g = f1[1,1] = GridLayout()
+	
+	axs_design = Axis(g[1,1],title = "Element $element_number", titlesize = 20,
+	aspect = DataAspect(),
+	limits = (-xmax-100, xmax+100, -1.3*L, 0.6*L),
+	yticks = L:-100:-L,
+	# yminorticks = IntervalsBetween(2),
+	# yminorgridvisible = true,
+	ylabel = "y"
+	)
+	
+	poly!(Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
+	tendon = lines!(axs_design, x_range, -tendon_profile)
+	
+	axs_axial  = Axis(g[2,1],aspect = 10,
+	limits = (-xmax, xmax, nothing, nothing),ylabel = "Axial [kN]", 
+	)
+	
+	axs_moment = Axis(g[3,1],aspect = 10,
+	limits = (-xmax, xmax, nothing, nothing),ylabel = "Moment [kNm]",
+	)
+	axs_shear  = Axis(g[4,1],aspect = 10,
+	limits = (-xmax, xmax, nothing, nothing),ylabel = "Shear [kN]", 
+	)
+	hidexdecorations!(axs_design, grid = false)
+	hidexdecorations!(axs_axial, grid = false)
+	hidexdecorations!(axs_moment, grid = false)
+	
+	lines!(axs_axial ,x_range, axial_capacity , color = :red)
+	lines!(axs_moment,x_range, moment_capacity, color = :blue)
+	lines!(axs_shear ,x_range, shear_capacity , color = :green)
+	
+	lines!(axs_axial ,x_range, axial_demand ,linestyle = :dash, color = :red)
+	lines!(axs_moment,x_range, moment_demand,linestyle = :dash, color = :blue)
+	lines!(axs_shear ,x_range, shear_demand ,linestyle = :dash, color = :green)
+	
+	
+	# for (i, label) in enumerate(["Axial [kN]", "Moment [kNm]", "Shear [kN]"])
+	#     Box(g[i, 2], color = :gray90)
+	#     Label(g[i,2], label, rotation = pi/2, tellheight = false)
+	# end
+	
+	rowgap!(g, 10)
+	
+	@show yspace = maximum(tight_yticklabel_spacing!, [axs_axial, axs_shear, axs_moment])+10
+	
+	axs_axial.yticklabelspace = yspace
+	axs_moment.yticklabelspace = yspace
+	axs_shear.yticklabelspace = yspace
+	
+	f1
+	
+	return f1
+	end
+	
+
+	#test 
+	plot_element(1, designs)
+	
+	for i in 1:19
+		f = plot_element(i, designs)
+		save("src/Results4/$i.png",f)
+	end
 
 # ╔═╡ Cell order:
 # ╟─98b2e2c0-c506-11ee-3000-a1f509a4a1a3
@@ -524,5 +672,5 @@ elements_designs, elements_to_sections, sections_to_designs  = find_optimum(all_
 # ╠═d02089f3-5123-4cdb-8f5f-810a393e5e4e
 # ╠═0d5119c9-8874-4efd-8400-22c359b804cf
 # ╠═df8a7202-49c9-4e8a-81eb-aa63cc410888
-# ╠═e06e8d59-7c7f-454a-bac5-2cccbe525f09
+# ╠═0176e9c5-de48-4163-9cfb-b909177869dc
 # ╠═5df9ac50-bdef-4cfb-845f-8d84b9be1ef8
