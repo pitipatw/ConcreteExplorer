@@ -67,7 +67,7 @@ Load the design catalog
 
 # ╔═╡ f074d05a-4a52-485f-b0cb-4a79a6fa42b3
 begin
-	catalog = CSV.read("src/Catalogs/FEB6_2_catalog_static.csv", DataFrame); 
+	catalog = CSV.read("src/Catalogs/FEB6_4_catalog_static.csv", DataFrame); 
 	# sort!(catalog, [:carbon, :fc′, :as, :dps])
 	println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
 	println(catalog[1:20,:])
@@ -267,7 +267,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
             demands[i, "total_results"] = 0
             # println(outr)
         else
-			@show minimum(feasible_sections[!, :Mu])
+			# @show minimum(feasible_sections[!, :Mu])
             all_feasible_sections[i] = feasible_sections[!, :ID]
             demands[i, "total_results"] = length(feasible_sections[!, :ID])
             # println(outr)
@@ -397,22 +397,21 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			# this_fR1 = mid_catalog[global_d, :fR1]
 			# this_fR3 = mid_catalog[global_d, :fR3]
 			println("final_d_idx is $final_d_idx")
-	        @show this_fpe = mid_catalog[final_d_idx, :fpe] 
-	        @show this_as = mid_catalog[final_d_idx, :as]
+	        this_fpe = mid_catalog[final_d_idx, :fpe] 
+	        this_as = mid_catalog[final_d_idx, :as]
 	
 	        sections_designs = Vector{Vector}(undef, ns)
 	        for is in eachindex(elements_to_sections[i])
 	            #current section index
-	            @show s = elements_to_sections[i][is]
+	            s = elements_to_sections[i][is]
 	
 	            feasible_idx = all_feasible_sections[s] # all feasible sections for this section.
-				println("Feasible Catalog")
-				@show catalog[feasible_idx, :]
+				# println("Feasible Catalog")
 	            # fc′_fpe_as(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
 	            fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
 	
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
-	            @show this_catalog = filter([:fpe, :as] => fpe_as, catalog[feasible_idx, :])
+	            this_catalog = filter([:fpe, :as] => fpe_as, catalog[feasible_idx, :])
 	
 	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon will be the first index.
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
@@ -645,8 +644,90 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	
 	for i in 1:19
 		f = plot_element(i, designs)
-		save("src/Results4/$i.png",f)
+		save("src/Results5/$i.png",f)
 	end
+
+	#summarize the result. 
+	function get_design_properties(sections_to_designs::Dict{Int64, Vector{Float64}}, idx::Int64)
+		output = Vector{Float64}(undef, length(sections_to_designs))
+		for i in eachindex(sections_to_designs)
+			@show i
+			output[i] = sections_to_designs[i][idx]
+		end
+		return output
+	end
+
+
+	
+	all_fc′  = get_design_properties(sections_to_designs,1)
+	all_fR1  = get_design_properties(sections_to_designs,2)
+	all_fR3  = get_design_properties(sections_to_designs,3)
+	all_as   = get_design_properties(sections_to_designs,4)
+	all_dps  = get_design_properties(sections_to_designs,5)
+	all_fpe  = get_design_properties(sections_to_designs,6)
+	stack_name = hcat(string.(all_fc′,"_", all_fR1,"_", all_fR3))
+	@show unique_stack_name = unique(stack_name)
+	MK_file_prep = DataFrame(:fc′ => all_fc′, :fR1 => all_fR1, :fR3=>all_fR3)
+
+	csv_fc′ = Vector{Float64}()
+	csv_fR1 = Vector{Float64}()
+	csv_fR3 = Vector{Float64}()
+
+	for i in 1:length(unique_stack_name)
+		@show vals = parse.(Float64,split(unique_stack_name[i], "_"))
+		@show typeof(vals[1])
+		@show typeof(vals[2])
+		@show typeof(vals[3])
+		push!(csv_fc′, vals[1])
+		push!(csv_fR1, vals[2])
+		push!(csv_fR3, vals[3])
+	end
+	
+	csv_output = DataFrame(:fc′=> csv_fc′, :fR1=> csv_fR1, :fR3=>csv_fR3)
+	CSV.write(joinpath(@__DIR__, "mix_specs.csv"), csv_output)
+	
+	
+	
+	#each pair, plots them dots and x and a line connecting them together. 
+
+
+
+
+	f_final = Figure(size= (500,500))
+	ax1 = Axis(f_final[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = "Demands vs Designs")
+	demand_points = hcat(demands[!, :mu] , demands[!,:vu])
+	design_points = hcat(get_design_properties(sections_to_designs,8),get_design_properties(sections_to_designs,9))
+	for i in 1:size(demand_points)[1]
+		x1 = demand_points[i,1]
+		y1 = demand_points[i,2]
+		x2 = design_points[i,1]
+		y2 = design_points[i,2]
+		@assert x2>x1
+		@assert y2>y1
+		u = x2-x1
+		v = y2-y1
+		arrows!([x1],[y1],[u],[v], arrowsize = 5)
+	end
+	scatter!(ax1, demand_points[:,1],demand_points[:,2], color = :red, markersize = 10)
+	scatter!(ax1, design_points[:,1],design_points[:,2], color = all_fc′, market_size = 10)
+
+	f_final
+
+
+
+	f = Figure(size = (800, 800))
+	Axis(f[1, 1], backgroundcolor = "black")
+	
+	xs = LinRange(0, 2pi, 20)
+	ys = LinRange(0, 3pi, 20)
+	us = [sin(x) * cos(y) for x in xs, y in ys]
+	vs = [-cos(x) * sin(y) for x in xs, y in ys]
+	strength = vec(sqrt.(us .^ 2 .+ vs .^ 2))
+	
+	arrows!(xs, ys, us, vs, arrowsize = 10, lengthscale = 0.3,
+		arrowcolor = strength, linecolor = strength)
+	
+	f
 
 # ╔═╡ Cell order:
 # ╟─98b2e2c0-c506-11ee-3000-a1f509a4a1a3

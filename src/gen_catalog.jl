@@ -44,7 +44,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         range_dps = 50.0
         range_fpe = 186.0
     elseif !test
-        fc_fiber = CSV.read("src//fc_fiber.csv", DataFrame)
+        fc_fiber = CSV.read("src//fiber_with_extrapolation.csv", DataFrame)
         #These come in pair
         range_fc′= convert(Array{Float64}, fc_fiber[!, :strength])
         range_fR1 = fc_fiber[!, :fR1]
@@ -122,7 +122,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB6_2_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB6_4_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)
