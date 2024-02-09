@@ -539,12 +539,16 @@ end
 # ╔═╡ 5df9ac50-bdef-4cfb-845f-8d84b9be1ef8
 elements_designs, elements_to_sections, sections_to_designs  = find_optimum(all_feasible_sections, demands)
 println(elements_designs)
-open("src/Results/designs_results_06_02.json","w") do f
+
+
+elements_designs_fielded = Vector{Dict{String,Real}}()
+# for i in eachindex(elements_designs)
+open("src/Results/designs_results_09_02.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src/Results/sections_to_designs_06_02.json","w") do f
+open("src/Results/sections_to_designs_09_02.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
@@ -553,6 +557,22 @@ using JSON
 using DataFrames, CSV
 
 designs = JSON.parsefile(joinpath(@__DIR__,"Results/designs_results_06_02.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+mapping_strings = ["ID","fc′", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id"]
+for i in 1:length(elements_designs)
+	for s in eachindex(elements_designs[i])
+		global_s_index = elements_to_sections[i][s]
+		println(global_s_index)
+		# @show  Dict(mapping_strings .=> elements_designs[parse(Int64,i)][s])
+		# @show elements_designs_fielded[global_s_index]
+		push!(elements_designs_fielded, Dict(mapping_strings .=> vcat(global_s_index-1, elements_designs[i][s])))
+		# elements_designs_fielded[global_s_index] =
+	end
+end 
+
+open("src/Results/09_02_designs_results_fielded.json","w") do f
+    JSON.print(f, elements_designs_fielded)
+end
+
 ne = length(designs)
 println("There are $ne elements.")
 
