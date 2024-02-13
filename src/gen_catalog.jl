@@ -24,7 +24,9 @@ function mapping(n::Vector{Int64}, idx::Vector{Int64})::Int64
     return sum(d)
 end
 
-
+"""
+    get_catalog(test::Bool)::DataFrame
+"""
 function get_catalog(test::Bool)::DataFrame
     pixel_sections = [205.0 35.0 30.0] #updated by Jenna Jan 2024
     out = DataFrame()
@@ -36,6 +38,11 @@ function get_catalog(test::Bool)::DataFrame
     return out
 end
 
+"""
+    get_catalog(L,t,Lc; test = true)::DataFrame
+test = true (depreciated) get a dummy catalog.
+test = false get a full catalog.
+"""
 function get_catalog(L, t, Lc; test=true)::DataFrame
     if test #depreciated
         #test
@@ -44,17 +51,18 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         range_dps = 50.0
         range_fpe = 186.0
     elseif !test
-        fc_fiber = CSV.read("src//fiber_with_extrapolation.csv", DataFrame)
-        #These come in pair
-        range_fc′= convert(Array{Float64}, fc_fiber[!, :strength])
+        fc_fiber = CSV.read("src//Tables//fiber_with_extrapolation.csv", DataFrame)
+        #These come in a set of (fc′,fR1, fR3)
+        range_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
         range_fR1 = fc_fiber[!, :fR1]
         range_fR3 = fc_fiber[!, :fR3]
-        @assert length(range_fc′) == length(range_fR1) == length(range_fR3)
+        @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
+        @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
 
         range_as = [99.0 * 2, 140.0 * 2] # x2 are for 2 ropes on 2 sides
-        range_dps = vcat(0.0:20:300) #mm either in the middle, or 5cm shifted.
+        range_dps = vcat(0.0:20:350.0) 
         range_fpe = (0.00:0.050:0.7) * 1860.0 #MPa
-        range_type = [3.0] #2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+        range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     else
         println("Error Invalid test case")
         return nothing
@@ -122,7 +130,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB6_4_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB13_1_catalog_static.csv"), results)
 
 
 # calcap(28., 99.0, 0.5, 1600.0)
