@@ -22,15 +22,15 @@ end
 
 # ╔═╡ e7416f5a-d161-46db-acd7-e9e69d822abf
 # ╠═╡ show_logs = false
-let
+begin
 	include("Functions/definition.jl");
 	include("Functions/functions.jl");
 	include("Functions/structuralelement.jl")
 	include("Functions/generalfunctions.jl")
-	
+
 	include("Functions/get_Deflection.jl")
 	include("Functions/interpolations.jl");
-end
+end;
 
 # ╔═╡ 98b2e2c0-c506-11ee-3000-a1f509a4a1a3
 md"""
@@ -63,9 +63,8 @@ Load required packages
 # ╔═╡ 41fa7984-11cb-4da2-8772-bb1e4ca40a54
 md"""
 Load the design catalog
-"""
+Currently using version FEB6_4"""
 
-# ╔═╡ f074d05a-4a52-485f-b0cb-4a79a6fa42b3
 begin
 	catalog = CSV.read("src/Catalogs/FEB6_4_catalog_static.csv", DataFrame); 
 	# sort!(catalog, [:carbon, :fc′, :as, :dps])
