@@ -65,7 +65,7 @@ points = dftovec(results)
 
 colors = lift(val...) do fc′, as, dps, fpe, carbon, L, t, Lc, T, Pu, Mu, Vu
     map(points) do p
-        (fc′[1]    <= p[1]  <= fc′[2])    &&
+        x = (fc′[1]    <= p[1]  <= fc′[2])    &&
         (as[1]     <= p[2]  <= as[2])     &&
         (dps[1]    <= p[3]  <= dps[2])    &&
         (fpe[1]    <= p[4]  <= fpe[2])    &&
@@ -88,7 +88,7 @@ for i in eachindex(titles)
     # println(row,",", col)
     # Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel="dps [mm]", xticks=0:25:350, limits=(0, 310, nothing, nothing))
     #plot non-zero as colorful plot
-    scatter!(Axes[i], results[!, :dps], results[!, titles[i]], colormap= [ :white, :red], markersize=7.5 , color = colors, colorrange = LinRange(0,1,2))
+    scatter!(Axes[i], results[!, :dps], results[!, titles[i]], colormap= [:white, :red], markersize= colors , color = colors, colorrange = LinRange(0,1,4), transparency = true )
     #plot zeros as black on top (that's why it is separated and plotted later.)
     # scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
 end
