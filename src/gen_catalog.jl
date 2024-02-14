@@ -28,7 +28,7 @@ end
     get_catalog(test::Bool)::DataFrame
 """
 function get_catalog(test::Bool)::DataFrame
-    pixel_sections = [205.0 35.0 30.0] #updated by Jenna Jan 2024
+    pixel_sections = [205.0 35.0 30.0; 100.0 20.0 15] #updated by Jenna Jan 2024
     out = DataFrame()
     for i in 1:size(pixel_sections)[1]
         L, t, Lc = pixel_sections[i, :]
@@ -59,7 +59,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
         @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
 
-        range_as = [99.0 * 2, 140.0 * 2] # x2 are for 2 ropes on 2 sides
+        range_as = (99.0 * 2):10:(140.0 * 2) # x2 are for 2 ropes on 2 sides
         range_dps = vcat(0.0:20:350.0) 
         range_fpe = (0.00:0.050:0.7) * 1860.0 #MPa
         range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
@@ -130,7 +130,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB13_1_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB14_1_catalog_static.csv"), results)
 
 
 

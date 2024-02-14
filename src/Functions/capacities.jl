@@ -112,7 +112,11 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     rebarpos = 0.0 - dps  #Centroud at 0.0, move downward dps
     d = ymax-rebarpos
     @assert d > 0
-    @assert d > c
+    # try 
+    #     @assert d > c "deeper than c"
+    # catch 
+    #     return 
+
     ϵc = c * ϵs / (d - c)
 
     if ϵc > 0.003

@@ -4,10 +4,22 @@ using CSV, DataFrames
 
 GLMakie.activate!()
 
+
+
+
 results = CSV.read("src/Catalogs/FEB6_4_catalog_static.csv", DataFrame);
 # results = results[1:10,:]
-# color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
-f_catalog = Figure(size=(30000, 20000))
+color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
+x_axis = "fc′"
+x_label = "fc′ [MPa]"
+x_min = minimum(results[!, x_axis])
+x_max = maximum(results[!, x_axis])
+
+
+
+f_catalog = Figure(size=(3000, 2000))
+
+
 
 titles = ["fc′", "as", "dps", "fpe", "carbon", "L", "t", "Lc", "T", "Pu", "Mu", "Vu"]
 units = ["MPa", "mm2", "mm", "MPa", "kgCO2e/m", "mm", "mm", "mm", "-", "kN", "kNm", "kN"]
@@ -38,9 +50,9 @@ for i in eachindex(titles)
     row = div(i - 1, 5) + 1
     col = mod(i + 4, 5) + 1
     # println(row,",", col)
-    Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel="dps [mm]", xticks=0:25:350, limits=(-10, 310, nothing, nothing))
+    Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel= x_label, xticks=0:25:350, limits=(-10, x_max*1.05, nothing, nothing))
     #plot non-zero as colorful plot
-    # scatter!(Axes[i], results[!, :dps], results[!, titles[i]], color=:grey, markersize=7.5, transparent = true)
+    scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], color=:grey, markersize = 2, transparent = true)
     #plot zeros as black on top (that's why it is separated and plotted later.)
 end
 
@@ -80,7 +92,13 @@ colors = lift(val...) do fc′, as, dps, fpe, carbon, L, t, Lc, T, Pu, Mu, Vu
     end
 end
 
+marker_size = lift(colors) do c
+    c.*7.5
+end
 
+colors = lift(colors) do c 
+    c.*results[!, :Mu]
+end
 
 for i in eachindex(titles)
     row = div(i - 1, 5) + 1
@@ -88,7 +106,7 @@ for i in eachindex(titles)
     # println(row,",", col)
     # Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel="dps [mm]", xticks=0:25:350, limits=(0, 310, nothing, nothing))
     #plot non-zero as colorful plot
-    scatter!(Axes[i], results[!, :dps], results[!, titles[i]], colormap= [:white, :red], markersize= colors , color = colors, colorrange = LinRange(0,1,4), transparency = true )
+    scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], colormap= :plasma, markersize= marker_size , color = colors, colorrange = color_range, transparency = true )
     #plot zeros as black on top (that's why it is separated and plotted later.)
     # scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
 end
