@@ -1,0 +1,53 @@
+#dummy structures
+
+#looping
+widths = [1000.0, 2000.0, 4000.0]
+lengths = 3000.:1000.:20000.
+
+
+#Serviceability parameters
+ll = 0.0048 #[N/mm2] pressure live load
+dl = 0.007 #[N/mm2] pressure dead load
+
+# bay sizes
+
+#will be in the loop.
+#for width in widths
+#for length in lengths
+width = 2000.0 #[mm] bay depth
+l = 4000.0 #[mm] length of the simply supported beam
+
+#assumed beam's weight, biggest beam size (will have to comback and iterate this)
+dl_beam = 6.0 #N/mm [approx]
+
+total_load_ult  = 1.2*(dl * width + dl_beam) + 1.6*(ll * width)  #[N/mm] total load on the beam
+total_load_serv = 1.0*(dl * width + dl_beam) + 1.0*(ll * width)  #[N/mm] total load on the beam
+# w_d = dl * width #[N/mm] uniformly distributed dead load
+# w_l = ll * width #[N/mm] uniformly distributed live load
+# w_tot = w_d + w_l #[N/mm] total uniformly distributed load
+moment_ult  = total_load_ult * l^2 / 8.0 #[Nmm] moment from the ultimate load
+moment_serv = total_load_serv * l^2 / 8.0 #[Nmm] moment from the service load
+
+mu_i = moment_ult
+deflection_limit = l/240 #[mm]
+#now, we look at the catalog, and find the one that mu > mu_i, 
+# if load are satisfied, we varied, from 
+# 1. lowest gwp
+# 2. lowest depth #constraint
+
+#catalog is a dataframe, therefore, 
+
+# pass_sections = select(catalog)
+
+pass_sections = filter(:Mu => x-> x > mu_i, catalog)
+
+#now we have the load, calculating the Ig
+Iconcrete = #get it from the 
+Irebar = 0 #have to find around the centroid of the section.
+Ig = Iconcrete + Irebar 
+#calculate deflection for each beam.
+
+#sort by gwp and depth both ascending.
+sort!(pass_sections, :Gwp, rev=false)
+
+
