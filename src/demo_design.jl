@@ -59,7 +59,8 @@ Load the precalculated catalog"""
 begin
     # catalog = CSV.read("Catalogs/test_catalog.csv", DataFrame); #load the pre-calc catalog
     catalog = CSV.read("Catalogs/FEB1_1_catalog_static.csv", DataFrame); #load the pre-calc catalog
-    
+    # data = JSON.parsefile("src//Demands//sample1.json")
+
     sort!(catalog, [:carbon, :fc′, :as, :dps])
     
     
