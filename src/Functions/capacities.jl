@@ -1,5 +1,5 @@
 include("../Functions/Geometry/pixelgeo.jl")
-include("../Functions/embodiedCarbon.jl")
+include("../Functions/embodiedcarbon.jl")
 
 
 """
@@ -277,7 +277,7 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
 
     # 0.854 kgCo2e per kgsteel
     # 7850 kg/m3
-    cst = 0.854*7850 #kgCO2e/m3
+    cst = rebar2e() #0.854*7850 #kgCO2e/m3
     
     ac = compoundsection.area
     embodied = ( ac*cfc + as*cst )/ 1e6 # mm2 -> m2

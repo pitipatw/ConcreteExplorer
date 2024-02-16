@@ -1,16 +1,37 @@
 #Functions associated with embodied carbon
 
 """
-Get embodied carbon coefficient of concrete based on fc′
-input : fc′ [MPa]
-output: ecc of fc′ [kgCO2e/m3]
+    fc2e(fc′::Real)::Float64
+Return embodied carbon coefficient of concrete based on fc′ [kgCO2e/m3]
 """
-function fc2e(fc′::Real)
-    out = -0.0626944435544512 * fc′^2 + 10.0086510099949 * fc′ + 84.14807
-   return out
+function fc2e(fc′::Real)::Float64
+    cfc = -0.0626944435544512 * fc′^2 + 10.0086510099949 * fc′ + 84.14807
+   return cfc
 end
 
-function rebar2e(area::Real)
-    out = 120.0
-    return out
+function fc2e(fc′::Real, dosage::Real)::Float64
+    cfc = fc2c(fc′) + rebar2e()*dosage()
+
+"""
+    rebar2e()::Float64
+Get the embodied carbon coefficient for steel.
+input : no input
+output: ecc of rebar [kgCO2e/m3]
+"""
+function rebar2e()::Float64
+    # 0.854 kgCO2e per kg steel
+    # 7850 kg/m3
+    cst = 0.854*7850 #kgCO2e/m3
+    return cst
 end
+
+using Makie, GLMakie
+f1 = Figure(size = (100,100))
+ax1 = Axis(f1[1,1])
+
+fc′ = 0:0.01:200
+cfc = fc2e.(fc′)
+
+scatter!(ax1, fc′, cfc)
+vlines!(ax1, 60)
+f1
