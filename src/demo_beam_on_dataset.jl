@@ -145,6 +145,8 @@ ylabel = "Embodied Carbon [kgCO2e/m3]",
 xlabelsize = 15,
 ylabelsize = 15,
 
+xticklabelrotation = 45,
+
 limits = (0, nothing, 0, 1500),
 
 xticks = fc′_design, xtickformat =  x -> printx.(x,2),
@@ -181,17 +183,17 @@ points_y = Observable(Vector{Float64}())
 #select a company
 company_name = on(menu.selection) do name
     company_dataset = dataset_Broyles[dataset_Broyles.Company .== name, :]
-    points_x.val = company_dataset[!, fc′_column_name]
+    points_x.val = company_dataset[!, fc′_column_name]*0.00689476
     points_y[] = company_dataset[!, ec_column_name]
     
     dummy_line4 = Vector{Float64}(undef, 9);
 
     for i in 1:9
-        company_dataset_label = company_dataset[company_dataset.Label .== i, ec_column_name ]\
+        company_dataset_label = company_dataset[company_dataset.Label .== i, ec_column_name ]
         if length(company_dataset_label) > 0
-            val = median(company_dataset[company_dataset.Label .== i, ec_column_name ])
+            @show val = median(company_dataset[company_dataset.Label .== i, ec_column_name ])
             if val == 0 
-            dummy_line4[i] = nothing 
+                dummy_line4[i] = nothing 
             else 
                 dummy_line4[i] = val
             end
@@ -204,17 +206,18 @@ end
 
 
 #plot the previous data, greyed out
-lines!(ax4, fc′_design,line4, label = company_name, linewidth = 3)
 scatter!(ax4, points_x, points_y, color = :black)
+scatter!(ax4, fc′_design,line4, label = company_name, marker = :utriangle , markersize = 20, color = :orange)
+lines!(ax4, fc′_design, line4, color = :skyblue)
 # Legend(right_grid[2,1],ax4)
 f4
 
 
-println(fc′_design)
-scheme1 = hcat(fc′_design, line1*10^(-9));
-scheme2 = hcat(fc′_design, line2*10^(-9));
-scheme3 = hcat(fc′_design, line3*10^(-9));
-scheme4 = hcat(fc′_design, line4*10^(-9));
+# println(fc′_design)
+# scheme1 = hcat(fc′_design, line1*10^(-9));
+# scheme2 = hcat(fc′_design, line2*10^(-9));
+# scheme3 = hcat(fc′_design, line3*10^(-9));
+# scheme4 = hcat(fc′_design, line4*10^(-9));
 
 
 
