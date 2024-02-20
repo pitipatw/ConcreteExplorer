@@ -213,11 +213,6 @@ lines!(ax4, fc′_design, line4, color = :skyblue)
 f4
 
 
-# println(fc′_design)
-# scheme1 = hcat(fc′_design, line1*10^(-9));
-# scheme2 = hcat(fc′_design, line2*10^(-9));
-# scheme3 = hcat(fc′_design, line3*10^(-9));
-# scheme4 = hcat(fc′_design, line4*10^(-9));
 
 
 
