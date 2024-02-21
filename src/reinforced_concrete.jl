@@ -1,6 +1,7 @@
 using AsapSections
 using Makie, GLMakie
 using Printf
+using Formatting
 
 """ ReinforcedConcreteSection
 Fields
@@ -10,7 +11,7 @@ Fields
 """
 mutable struct ReinforcedConcreteSection
     # concrete_section::SolidSection
-    concrete_sections::CompoundSection
+    concrete_section::CompoundSection
     # rebar_section::Vector{SolidSection}
     rebar_sections::CompoundSection
     section_embodied_carbon::Float64
@@ -36,7 +37,9 @@ function create_rc_section(
     # covering = 50.0 #mm
     concrete_section = CompoundSection([SolidSection(concrete_section_pts)])
     rebar_sections = CompoundSection(SolidSection.([circle_pts(rebar_radius[i], base = rebar_pos[:,i]) for i in eachindex(rebar_radius)]))
-    section_embodied_carbon = concrete_section.area*concrete_carbon + rebar_sections.area*0.854*7850
+    c_area = concrete_section.area
+    r_area = rebar_sections.area
+    section_embodied_carbon = (c_area-r_area)*concrete_carbon + r_area*0.854*7850
     return ReinforcedConcreteSection(concrete_section, 
         rebar_sections, 
         section_embodied_carbon,
@@ -45,26 +48,40 @@ end
 
 function draw(rc_section::ReinforcedConcreteSection)
     f1 = Figure(size = (600,600)) 
-    a1 = Axis(f1[1,1], aspect = DataAspect() )
+    ax1 = Axis(f1[1,1], aspect = DataAspect() )
     # poly!(a1, rc_section.concrete_section.points, color = colorant"#B2B2B2")
-    for cs in rc_section.concrete_sections.solids
-        poly!(a1, cs.points, color = colorant"#B2B2B2")
+    for cs in rc_section.concrete_section.solids
+        poly!(ax1, cs.points, color = colorant"#B2B2B2")
     end
 
     for rs in rc_section.rebar_sections.solids
         # poly!(a1, i.points, color = colorant"#3EA8DE")
-        poly!(a1, rs.points, color = colorant"#3EA8DE")
+        poly!(ax1, rs.points, color = colorant"#3EA8DE")
     end
+    c_area = rc_section.concrete_section.area
+    r_area = rc_section.rebar_sections.area
+
+    text!(ax1, "Total: "*string(format(rc_section.section_embodied_carbon/1e6,  precision =2))*" kgCO2e/m", position= (50,-100) )
+    text!(ax1, "Concrete: "*string(format((c_area-r_area)*rc_section.ec_concrete/1e6, precision = 2))*" kgCO2e/m", position= (50,-150))
+    text!(ax1, "Steel: "*string(format(r_area*rc_section.ec_rebar/1e6, precision = 2))*" kgCO2e/m", position= (50,-200))
     return f1
 end
 
 
-
+""" beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::Float64;
+span::Float64 = 10_000.0,
+bay::Float64  = 10_000.0,
+# wLL::Float64  = 1.92e-3,
+wLL::Float64  = 2.40e-3,
+wSDL::Float64 = (24e-6*300), #2400kg/m3 * 300cm -> N/mm2
+echo = false
+)
+"""
 function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::Float64;
     span::Float64 = 10_000.0,
     bay::Float64  = 10_000.0,
     # wLL::Float64  = 1.92e-3,
-    wLL::Float64  = 2.40e-3,
+    wLL::Float64  = 2.40e-3, #N/mm2
     wSDL::Float64 = (24e-6*300), #2400kg/m3 * 300cm -> N/mm2
     echo = false
     )
@@ -82,7 +99,7 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
     (fabricated)
     854 kgCO2e/metricTon -> 854*7.85 metricTon/m3 = 6703.90 kgCO2e/m3
     """
-    ec_rebar = 5911.05e-9 #kgCO2e/mm3
+    ec_rebar = 6703.90e-9 #kgCO2e/mm3
     #section definition
     # d = 600.0 #mm
     # bd_ratio = 0.5
@@ -115,31 +132,30 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
 
     #check inside root more than 0?
     # B^2-4*C > 0 
-    try 
-        a = (-B - sqrt(B^2-4*C))/2
-    catch 
-        println("Under square root <0")
-        return area*span*10000, 0.0
+    if B^2 - 4*C < 0 
+        return Inf, Inf, Inf, "negative under root"
+    end
+ 
+    a = (-B - sqrt(B^2-4*C))/2
+    if a < 0
+        a = (-B + sqrt(B^2-4*C))/2
     end
 
-    a = a > 0 ? a : (-B + sqrt(B^2-4*C))/2
-
-    # if a < 0 || a> d 
-    #     return b*d*10000000
-    # end
+    if a < 0 || a> d 
+        return b*d*10_000
+    end
     # @assert 0 < a < d
     # @assert  Mdemand - 0.85*fc′*a*b*(d-a/2) <= 0.001
 
+    #find required steel area.
     as = Mdemand/(fy*(d-a/2))
-    # c = a/0.85
-    # ϵs = 0.003*(d-c)/c 
-    # if ϵs < 0.005
-    #     # println("NON ductile behavior")
-    # end
+
+    #if as is too small, push it to the minimum.
     #0.0018 is from ACI (see the jupyter notebook)
     ρ_min = clamp(as/(area-as), 0.0018, Inf)
+    as = ρ_min*(area-as)
 
-    #find ρ_max 
+    #find ρ_max which happens when ϵc and ϵs at max.
     c_max = 3/8*d
     a_max = 0.85*c_max
     as = Mdemand/(fy*(d-a_max/2))
@@ -150,6 +166,7 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
     area_max = area*ρ_max
     area_min = area*ρ_min
     
+    #currently unused.
     a_maximum = area_max*fy/(0.85*fc′*b)
     c_maximum = a_maximum/0.85
     ϵs_maximum = 0.003*(d-c_maximum)/c_maximum
@@ -172,12 +189,11 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
         ϵs = 0.003*(d-c)/c
     end
 
-    # δ_max = 5*w*L^4/(384*E*I)
-
+    # δ_max: 5*w*L^4/(384*E*I)
     #find E and I of the beam. 
     #we turn everything into a pure concrete with E = 4700sqrt(fc′) 
     as_transformed = Es/Ec*as 
-    total_area = area-as+as_transformed
+    total_area = area-as+as_transformed 
     #find a new neutral axis of the section 
     NA_concrete = -h/2 #section.centroid[2]
     NA_rebar = -d
@@ -197,6 +213,9 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
     serviceability = false
     if δ_max <= δ_limit
         serviceability = true
+        message = "service passes"
+    else 
+        message = "service fails"
     end
 
     #Flexural design is done. 
@@ -217,10 +236,10 @@ function beam_design(d::Float64, bd_ratio::Float64,fc′::Float64, ec_concrete::
     # circle1 = SolidSection(pts1)
     # circle2 = SolidSection(pts2)
 
-    embodied_carbon = span*(ec_concrete*(area-reinforcement_area) + ec_rebar*reinforcement_area)
+    embodied_carbon = span*(ec_concrete*(area-reinforcement_area) + ec_rebar*reinforcement_area)/1e6
     # rc_section = create_rc_section(section, [circle1, circle2], d, embodied_carbon)
     
-    return embodied_carbon, reinforcement_area, serviceability
+    return embodied_carbon, reinforcement_area, δ_max , message
 end
 
 function beam_design(fc′::Float64, ec_concrete::Float64)
@@ -229,8 +248,6 @@ function beam_design(fc′::Float64, ec_concrete::Float64)
     println("Assuming d: ", d, " and bd_ratio: ", bd_ratio)
     return  beam_design(d, bd_ratio,fc′, ec_concrete)
 end
-
-
 
 
 function beam_design2(d::Float64, bd_ratio::Float64,as::Float64,fc′::Float64, ec_concrete::Float64;
@@ -376,6 +393,6 @@ function beam_design2(d::Float64, bd_ratio::Float64,as::Float64,fc′::Float64, 
     embodied_carbon = span*(ec_concrete*(area-reinforcement_area) + ec_rebar*reinforcement_area)
     # rc_section = create_rc_section(section, [circle1, circle2], d, embodied_carbon)
     
-    return embodied_carbon, reinforcement_area, serviceability
+    return embodied_carbon, reinforcement_area, serviceability, "pass"
 end
 
