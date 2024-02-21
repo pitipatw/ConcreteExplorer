@@ -44,7 +44,7 @@ function create_rc_section(
 end
 
 function draw(rc_section::ReinforcedConcreteSection)
-    f1 = Figure(size = (300,300)) 
+    f1 = Figure(size = (600,600)) 
     a1 = Axis(f1[1,1], aspect = DataAspect() )
     # poly!(a1, rc_section.concrete_section.points, color = colorant"#B2B2B2")
     for cs in rc_section.concrete_sections.solids
@@ -55,7 +55,6 @@ function draw(rc_section::ReinforcedConcreteSection)
         # poly!(a1, i.points, color = colorant"#3EA8DE")
         poly!(a1, rs.points, color = colorant"#3EA8DE")
     end
-
     return f1
 end
 
