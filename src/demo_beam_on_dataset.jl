@@ -212,7 +212,10 @@ lines!(ax4, fc′_design, line4, color = :skyblue)
 # Legend(right_grid[2,1],ax4)
 f4
 
+#now, apply beam calculation on median points AND scatter points.
 
+include("reinforce_concrete.jl")
+include("beam_optimization.jl")
 
 
 

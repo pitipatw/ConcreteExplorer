@@ -2,54 +2,60 @@ using AsapSections
 using Makie, GLMakie
 using Printf
 
-"""
-Will have to work on this
+""" ReinforcedConcreteSection
+Fields
+ concrete_sections
+ rebar_sections
+ depths 
 """
 mutable struct ReinforcedConcreteSection
     # concrete_section::SolidSection
-    concrete_section::Matrix{Float64}
+    concrete_sections::CompoundSection
     # rebar_section::Vector{SolidSection}
-    rebar_section::Matrix{Float64}
-    depth::Float64
-    embodied_carbon::Float64
-    covering::Float64
+    rebar_sections::CompoundSection
+    section_embodied_carbon::Float64
+    # covering::Float64
     ec_concrete::Float64
-    ec_rebar::Float64
+    ec_rebar::Float64 #constant at 0.854*7850
 end
 
-"""
+function circle_pts(r::Float64; n=50, base=[0.0, 0.0])
+    return [r .* [cos(thet), sin(thet)] .+ base for thet in range(0, 2pi, n)]
+end
+
+"""create_rc_section
 ec for concrete and rebars are 1.0 (dummy)
 """
 function create_rc_section(
     # concrete_section::SolidSection
-    concrete_section::Matrix{Float64},
+    concrete_section_pts::Matrix{Float64},
     # rebar_section::Vector{SolidSection}
-    rebar_section::Matrix{Float64},
-    depth::Float64, 
-    embodied_carbon::Float64)
-    covering = 50.0 #mm
-    return ReinforcedConcreteSection(concrete_section, rebar_section,depth,embodied_carbon, covering,1.0,1.0)
+    rebar_radius::Vector{Float64},
+    rebar_pos::Matrix{Float64},
+    concrete_carbon::Float64)
+    # covering = 50.0 #mm
+    concrete_section = CompoundSection([SolidSection(concrete_section_pts)])
+    rebar_sections = CompoundSection(SolidSection.([circle_pts(rebar_radius[i], base = rebar_pos[:,i]) for i in eachindex(rebar_radius)]))
+    section_embodied_carbon = concrete_section.area*concrete_carbon + rebar_sections.area*0.854*7850
+    return ReinforcedConcreteSection(concrete_section, 
+        rebar_sections, 
+        section_embodied_carbon,
+        concrete_carbon, 0.854*7850)
 end
-
-"""
-Will have to work on this
-"""
-function create_rc_section(nothing)
-    return 
-end
-
 
 function draw(rc_section::ReinforcedConcreteSection)
     f1 = Figure(size = (300,300)) 
     a1 = Axis(f1[1,1], aspect = DataAspect() )
     # poly!(a1, rc_section.concrete_section.points, color = colorant"#B2B2B2")
-    poly!(a1, rc_section.concrete_section, color = colorant"#B2B2B2")
-
-    for i in rc_section.rebar_section
-        # poly!(a1, i.points, color = colorant"#3EA8DE")
-        poly!(a1, i, color = colorant"#3EA8DE")
-
+    for cs in rc_section.concrete_sections.solids
+        poly!(a1, cs.points, color = colorant"#B2B2B2")
     end
+
+    for rs in rc_section.rebar_sections.solids
+        # poly!(a1, i.points, color = colorant"#3EA8DE")
+        poly!(a1, rs.points, color = colorant"#3EA8DE")
+    end
+
     return f1
 end
 
