@@ -10,3 +10,14 @@ rebar_sections = CompoundSection(SolidSection.([circle_pts(rebar_radius[i], base
 
 s1 = create_rc_section(concrete_section_pts, rebar_radius, rebar_pos, concrete_carbon)
 draw(s1)
+
+b = 1000.0
+beam_design(1000.0,0.5, 28.5, 258.2)
+
+ϵs = 0.001:0.0001:0.006
+ϕ=  clamp.(0.65 .+ (ϵs .- 0.002).*(0.9-0.65)/(0.003), 0.65,0.9)
+
+f = Figure(size = (1000,1000))
+a1 = Axis(f[1,1])
+
+scatter!(a1, ϵs, ϕ)
