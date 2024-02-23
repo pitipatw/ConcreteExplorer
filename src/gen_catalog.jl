@@ -50,12 +50,13 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         range_as = 140.0
         range_dps = 50.0
         range_fpe = 186.0
-    elseif !test
+    elseif !test 
         fc_fiber = CSV.read("src//Tables//fiber_with_extrapolation.csv", DataFrame)
         #These come in a set of (fc′,fR1, fR3)
         range_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
         range_fR1 = fc_fiber[!, :fR1]
         range_fR3 = fc_fiber[!, :fR3]
+        range_dosage = fc_fiber[!, :dosage]
         @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
         @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
 
@@ -83,6 +84,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
                         fc′ = range_fc′[idx_fc′]
                         fR1 = range_fR1[idx_fc′]
                         fR3 = range_fR3[idx_fc′]
+                        dosage = range_dosage[idx_fc′]
 
                         as = range_as[idx_as]
                         dps = range_dps[idx_ec]
@@ -102,7 +104,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
                         end
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
-                        pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L)
+                        pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
                         idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe, idx_type]
 
                         idx = mapping(n, idx_all)
