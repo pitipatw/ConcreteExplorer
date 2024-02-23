@@ -66,7 +66,7 @@ Load the design catalog
 Currently using version FEB6_4"""
 
 begin
-	catalog = CSV.read("src/Catalogs/FEB6_4_catalog_static.csv", DataFrame); 
+	catalog = CSV.read("src/Catalogs/FEB23_2_catalog_static.csv", DataFrame); 
 	# sort!(catalog, [:carbon, :fc′, :as, :dps])
 	println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
 	println(catalog[1:20,:])
@@ -90,7 +90,6 @@ let
 		println("There are $ns points")
 		println("Demands were loads from:\n", demand_path)
 	end
-
 	println(demands[1:10,:])
 end
 
@@ -542,12 +541,12 @@ println(elements_designs)
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)
-open("src/Results/designs_results_09_02.json","w") do f
+open("src/Results/designs_results_23_02.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src/Results/sections_to_designs_09_02.json","w") do f
+open("src/Results/sections_to_designs_23_02.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
