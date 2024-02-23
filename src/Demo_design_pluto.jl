@@ -19,6 +19,8 @@ begin
 	using AsapSections
 end
 
+filename = "FEB_23_03"
+println("File version $filename")
 
 # ╔═╡ e7416f5a-d161-46db-acd7-e9e69d822abf
 # ╠═╡ show_logs = false
@@ -581,10 +583,10 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	element_number = string(element_number)
 	
 	L = 205
-	tendon_profile = [i[5] for i in designs[element_number]]
-	axial_capacity  = [i[7] for i in designs[element_number]]
-	moment_capacity = [i[8] for i in designs[element_number]]
-	shear_capacity = [i[9] for i in designs[element_number]]
+	tendon_profile = [i[6] for i in designs[element_number]]
+	axial_capacity  = [i[8] for i in designs[element_number]]
+	moment_capacity = [i[9] for i in designs[element_number]]
+	shear_capacity = [i[10] for i in designs[element_number]]
 	
 	
 	axial_demand  = [ demands[i,"pu"] for i in sections]
@@ -678,11 +680,12 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 
 	
 	all_fc′  = get_design_properties(sections_to_designs,1)
-	all_fR1  = get_design_properties(sections_to_designs,2)
-	all_fR3  = get_design_properties(sections_to_designs,3)
-	all_as   = get_design_properties(sections_to_designs,4)
-	all_dps  = get_design_properties(sections_to_designs,5)
-	all_fpe  = get_design_properties(sections_to_designs,6)
+	all_dosage = get_design_properties(sections_to_designs,2)
+	all_fR1  = get_design_properties(sections_to_designs,3)
+	all_fR3  = get_design_properties(sections_to_designs,4)
+	all_as   = get_design_properties(sections_to_designs,5)
+	all_dps  = get_design_properties(sections_to_designs,6)
+	all_fpe  = get_design_properties(sections_to_designs,7)
 	stack_name = hcat(string.(all_fc′,"_", all_fR1,"_", all_fR3))
 	@show unique_stack_name = unique(stack_name)
 	MK_file_prep = DataFrame(:fc′ => all_fc′, :fR1 => all_fR1, :fR3=>all_fR3)
@@ -711,7 +714,7 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	f_final = Figure(size= (500,500))
 	ax1 = Axis(f_final[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = "Demands vs Designs")
 	demand_points = hcat(demands[!, :mu] , demands[!,:vu])
-	design_points = hcat(get_design_properties(sections_to_designs,8),get_design_properties(sections_to_designs,9))
+	design_points = hcat(get_design_properties(sections_to_designs,9),get_design_properties(sections_to_designs,10))
 	for i in 1:size(demand_points)[1]
 		x1 = demand_points[i,1]
 		y1 = demand_points[i,2]
