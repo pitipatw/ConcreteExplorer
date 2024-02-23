@@ -541,12 +541,12 @@ println(elements_designs)
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)
-open("src/Results/designs_results_23_02.json","w") do f
+open("src//Results//designs_results_23_02.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src/Results/sections_to_designs_23_02.json","w") do f
+open("src//Results//sections_to_designs_23_02.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
@@ -554,8 +554,8 @@ using Makie, GLMakie, CairoMakie
 using JSON
 using DataFrames, CSV
 
-designs = JSON.parsefile(joinpath(@__DIR__,"Results/designs_results_06_02.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
-mapping_strings = ["ID","fc′", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id"]
+designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_23_02.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+mapping_strings = ["ID","fc′", "dosage", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id"]
 for i in 1:length(elements_designs)
 	for s in eachindex(elements_designs[i])
 		global_s_index = elements_to_sections[i][s]
@@ -567,7 +567,7 @@ for i in 1:length(elements_designs)
 	end
 end 
 
-open("src/Results/09_02_designs_results_fielded.json","w") do f
+open("src/Results/23_02_designs_results_fielded.json","w") do f
     JSON.print(f, elements_designs_fielded)
 end
 
@@ -662,7 +662,7 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	
 	for i in 1:19
 		f = plot_element(i, designs)
-		save("src/Results5/$i.png",f)
+		save("src/Results/Results6/$i.png",f)
 	end
 
 	#summarize the result. 
@@ -708,9 +708,6 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	
 	#each pair, plots them dots and x and a line connecting them together. 
 
-
-
-
 	f_final = Figure(size= (500,500))
 	ax1 = Axis(f_final[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = "Demands vs Designs")
 	demand_points = hcat(demands[!, :mu] , demands[!,:vu])
@@ -721,7 +718,7 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 		x2 = design_points[i,1]
 		y2 = design_points[i,2]
 		@assert x2>x1
-		@assert y2>y1
+		@assert y2>y1 i
 		u = x2-x1
 		v = y2-y1
 		arrows!([x1],[y1],[u],[v], arrowsize = 5)
@@ -733,19 +730,19 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 
 
 
-	f = Figure(size = (800, 800))
-	Axis(f[1, 1], backgroundcolor = "black")
+	# f = Figure(size = (800, 800))
+	# Axis(f[1, 1], backgroundcolor = "black")
 	
-	xs = LinRange(0, 2pi, 20)
-	ys = LinRange(0, 3pi, 20)
-	us = [sin(x) * cos(y) for x in xs, y in ys]
-	vs = [-cos(x) * sin(y) for x in xs, y in ys]
-	strength = vec(sqrt.(us .^ 2 .+ vs .^ 2))
+	# xs = LinRange(0, 2pi, 20)
+	# ys = LinRange(0, 3pi, 20)
+	# us = [sin(x) * cos(y) for x in xs, y in ys]
+	# vs = [-cos(x) * sin(y) for x in xs, y in ys]
+	# strength = vec(sqrt.(us .^ 2 .+ vs .^ 2))
 	
-	arrows!(xs, ys, us, vs, arrowsize = 10, lengthscale = 0.3,
-		arrowcolor = strength, linecolor = strength)
+	# arrows!(xs, ys, us, vs, arrowsize = 10, lengthscale = 0.3,
+	# 	arrowcolor = strength, linecolor = strength)
 	
-	f
+	# f
 
 # ╔═╡ Cell order:
 # ╟─98b2e2c0-c506-11ee-3000-a1f509a4a1a3
