@@ -62,6 +62,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
 #@unpack compoundsection, fc′, as, fpe, dps, L = pixelframesection
 #as = sum(as)
 #fpe = fpe[1]
+    echo = false
     if dps == 0.0
         return 0.0
     end 
@@ -83,7 +84,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         acomp = ac
         #re-calculate fps 
         fps = acomp*0.85*fc′/as 
-        @assert acomp = as * fps / (0.85 * fc′)
+        @assert acomp == as * fps / (0.85 * fc′)
     end
 
 
@@ -131,8 +132,10 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         while tol > 1e-3  #precision problem, if tol is too rough, new ϵc wont be exactly 0.003
             counter  +=1 
             if counter > 1000
+                if echo
                 println("Counter exceeds limit")
                 @show fc′, as, dps
+                end
                 return 0.0
                 break
             end
@@ -143,13 +146,14 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
             acomp = clamp(as * fps_new / (0.85 * fc′),1.0, 0.99*compoundsection.area)
             # @show compoundsection.area
             if acomp <0 
+                if echo
                 @show acomp
                 @show fps_new
 
                 @show c
                 @show d
                 @show L
-
+                end
             end
             c_new = depth_from_area(compoundsection,acomp,rel_tol = 1e-3,show_stats = false )
             tol = abs(c_new - c)/c
@@ -250,7 +254,7 @@ Mu [kNm]
 Shear [kN]
 """
 function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, dps::Float64, fpe::Float64,
-    L::Float64, dosage::Float64;
+    L::Float64, dosage::Real;
     echo = false)
 
     #Calculation starts here.

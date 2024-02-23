@@ -27,12 +27,14 @@ end
 """
     get_catalog(test::Bool)::DataFrame
 """
-function get_catalog(test::Bool)::DataFrame
-    pixel_sections = [205.0 35.0 30.0; 100.0 20.0 15] #updated by Jenna Jan 2024
+function get_catalog(case::String)::DataFrame
+    pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
+    nps = size(pixel_section)[1]
+    println("Getting catalog with $nps sections")
     out = DataFrame()
     for i in 1:size(pixel_sections)[1]
         L, t, Lc = pixel_sections[i, :]
-        sub_catalog = get_catalog(L, t, Lc, test=test)
+        sub_catalog = get_catalog(L, t, Lc, case = case)
         out = vcat(out, sub_catalog)
     end
     return out
@@ -43,14 +45,16 @@ end
 test = true (depreciated) get a dummy catalog.
 test = false get a full catalog.
 """
-function get_catalog(L, t, Lc; test=true)::DataFrame
-    if test #depreciated
+function get_catalog(L, t, Lc; case::String = "test")::DataFrame
+    if case == "test" #depreciated
         #test
+        println("Running test case")
         range_fc′ = 28.0
         range_as = 140.0
         range_dps = 50.0
         range_fpe = 186.0
-    elseif !test 
+    elseif case == "default" 
+        println("Running default mode")
         fc_fiber = CSV.read("src//Tables//fiber_with_extrapolation.csv", DataFrame)
         #These come in a set of (fc′,fR1, fR3)
         range_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
@@ -59,11 +63,13 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         range_dosage = fc_fiber[!, :dosage]
         @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
         @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
+        @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
-        range_as = (99.0 * 2):10:(140.0 * 2) # x2 are for 2 ropes on 2 sides
+        range_as = (99.0 * 2):10:(140.0 * 2) # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
         range_dps = vcat(0.0:20:350.0) 
         range_fpe = (0.00:0.050:0.7) * 1860.0 #MPa
         range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+    
     else
         println("Error Invalid test case")
         return nothing
@@ -115,7 +121,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
         end
     end
 
-    df = DataFrame(results, [:fc′, :fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T])
+    df = DataFrame(results, [:fc′, :dosage,:fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T])
     df[!, :ID] = 1:ntotal
     println("Got Catalog with $ntotal outputs")
     return df # results # DataFrame(results)
@@ -130,8 +136,8 @@ end
 
 # CSV.write(joinpath(@__DIR__,"Outputs\\output_$date.csv"), results)
 
-results = get_catalog(false)
-
+results = get_catalog("default")
+println("Here")
 CSV.write(joinpath(@__DIR__, "Catalogs/FEB23_1_catalog_static.csv"), results)
 
 
