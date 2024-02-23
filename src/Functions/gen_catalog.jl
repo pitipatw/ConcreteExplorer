@@ -5,9 +5,9 @@ using CSV
 using AsapSections
 using Printf
 
-include("Functions/Geometry/pixelgeo.jl")
-include("Functions/embodiedCarbon.jl")
-include("Functions/capacities.jl")
+include("Geometry/pixelgeo.jl")
+include("embodiedCarbon.jl")
+include("capacities.jl")
 
 """
 Map an n dimentional vector into an index.
@@ -27,14 +27,15 @@ end
 """
     get_catalog(test::Bool)::DataFrame
 """
-function get_catalog(case::String)::DataFrame
+function get_catalog(case::String; 
+    fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
     pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
     nps = size(pixel_sections)[1]
     println("Getting catalog with $nps section(s)")
     out = DataFrame()
     for i in 1:size(pixel_sections)[1]
         L, t, Lc = pixel_sections[i, :]
-        sub_catalog = get_catalog(L, t, Lc, case = case)
+        sub_catalog = get_catalog(L, t, Lc, case = case, fc′_path = fc′_path)
         out = vcat(out, sub_catalog)
     end
     return out
@@ -45,7 +46,8 @@ end
 test = true (depreciated) get a dummy catalog.
 test = false get a full catalog.
 """
-function get_catalog(L, t, Lc; case::String = "test")::DataFrame
+function get_catalog(L, t, Lc;
+     case::String = "test", fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
     if case == "test" #depreciated
         #test
         println("Running test case")
@@ -55,7 +57,7 @@ function get_catalog(L, t, Lc; case::String = "test")::DataFrame
         range_fpe = 186.0
     elseif case == "default" 
         println("Running default mode")
-        fc_fiber = CSV.read("src//Tables//fiber_with_extrapolation.csv", DataFrame)
+        fc_fiber = CSV.read(fc′_path, DataFrame)
         #These come in a set of (fc′,fR1, fR3)
         range_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
         range_fR1 = fc_fiber[!, :fR1]
@@ -127,18 +129,6 @@ function get_catalog(L, t, Lc; case::String = "test")::DataFrame
     return df # results # DataFrame(results)
 end
 
-#test
-# results_test = get_catalog()
-# results = get_catalog(100,10,10,test=false)
-# # 11.147s , 575.72 MiB allocation
-# date = Dates.today()
-# time = Dates.now()
-
-# CSV.write(joinpath(@__DIR__,"Outputs\\output_$date.csv"), results)
-
-results = get_catalog("default")
-println("Here")
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB23_2_catalog_static.csv"), results)
 
 
 

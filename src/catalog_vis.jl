@@ -7,7 +7,7 @@ GLMakie.activate!()
 
 
 
-results = CSV.read("src/Catalogs/FEB23_1_catalog_static.csv", DataFrame);
+results = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame);
 # results = results[1:10,:]
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
@@ -21,11 +21,11 @@ f_catalog = Figure(size=(3000, 2000))
 
 
 
-titles = ["fc′", "as", "dps", "fpe", "carbon", "L", "t", "Lc", "T", "Pu", "Mu", "Vu"]
-units = ["MPa", "mm2", "mm", "MPa", "kgCO2e/m", "mm", "mm", "mm", "-", "kN", "kNm", "kN"]
+titles = ["fc′", "as", "dps", "fpe", "dosage", "carbon", "L", "t", "Lc", "T", "Pu", "Mu", "Vu"]
+units = ["MPa", "mm2", "mm", "MPa", "kg steel/m3 concrete", "kgCO2e/m", "mm", "mm", "mm", "-", "kN", "kNm", "kN"]
 Axes = Vector{Axis}(undef, length(titles))
-g1 = f_catalog[3, 3] = GridLayout()
-g2 = f_catalog[3, 4] = GridLayout()
+g1 = f_catalog[3, 4] = GridLayout()
+g2 = f_catalog[3, 5] = GridLayout()
 
 slides = Vector{Any}(undef, length(titles))
 for i in eachindex(titles)
@@ -66,7 +66,7 @@ end
 # results_zeros = subset(results_zeros, :dps => x -> x .!= 0)
 
 
-val = Vector{Any}(undef,12)
+val = Vector{Any}(undef,13)
 for i in eachindex(val)
     val[i] = slides[i].interval
 end
@@ -75,20 +75,21 @@ dftovec(df::DataFrame) = [collect(df[i, titles]) for i in 1:size(df)[1]]
 
 points = dftovec(results)
 
-colors = lift(val...) do fc′, as, dps, fpe, carbon, L, t, Lc, T, Pu, Mu, Vu
+colors = lift(val...) do fc′, as, dps, fpe, dosage, carbon, L, t, Lc, T, Pu, Mu, Vu
     map(points) do p
         x = (fc′[1]    <= p[1]  <= fc′[2])    &&
         (as[1]     <= p[2]  <= as[2])     &&
         (dps[1]    <= p[3]  <= dps[2])    &&
         (fpe[1]    <= p[4]  <= fpe[2])    &&
-        (carbon[1] <= p[5]  <= carbon[2]) &&
-        (L[1]      <= p[6]  <= L[2])      &&
-        (t[1]      <= p[7]  <= t[2])      &&
-        (Lc[1]     <= p[8]  <= Lc[2])     &&
-        (T[1]      <= p[9]  <= T[2])      &&
-        (Pu[1]     <= p[10] <= Pu[2])     &&
-        (Mu[1]     <= p[11] <= Mu[2])     &&
-        (Vu[1]     <= p[12] <= Vu[2])
+        (dosage[1] <= p[5]  <= dosage[2])    &&
+        (carbon[1] <= p[6]  <= carbon[2]) &&
+        (L[1]      <= p[7]  <= L[2])      &&
+        (t[1]      <= p[8]  <= t[2])      &&
+        (Lc[1]     <= p[9]  <= Lc[2])     &&
+        (T[1]      <= p[10]  <= T[2])      &&
+        (Pu[1]     <= p[11] <= Pu[2])     &&
+        (Mu[1]     <= p[12] <= Mu[2])     &&
+        (Vu[1]     <= p[13] <= Vu[2])
     end
 end
 

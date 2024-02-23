@@ -214,8 +214,8 @@ f4
 
 #now, apply beam calculation on median points AND scatter points.
 
-include("reinforced_concrete.jl")
-include("beam_optimization.jl")
+# include("reinforced_concrete.jl")
+# include("beam_optimization.jl")
 
 
 
