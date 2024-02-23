@@ -27,7 +27,7 @@ end
 Get the embodied carbon coefficient of a concrete mix with steel fiber dosage
 """
 function fc2e(fc′::Real, dosage::Real)::Float64
-    cfc = fc2c(fc′) + 1.4*dosage 
+    cfc = fc2c(fc′) + 1.4*dosage #dosage: kg steel/m3 concret. 
     return cfc
 end
 
