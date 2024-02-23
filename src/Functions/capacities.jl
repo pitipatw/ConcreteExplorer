@@ -250,7 +250,7 @@ Mu [kNm]
 Shear [kN]
 """
 function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Float64, as::Float64, dps::Float64, fpe::Float64,
-    L::Float64;
+    L::Float64, dosage::Float64;
     echo = false)
 
     #Calculation starts here.
@@ -273,7 +273,7 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
     vu = get_Vu(compoundsection, fc′, fR1, fR3, as, fpe, L,)
 
     #Embodied Carbon Calculation
-    cfc = fc2e(fc′) #kgCO2e/m3
+    cfc = fc2e(fc′, dosage) #kgCO2e/m3
 
     # 0.854 kgCo2e per kgsteel
     # 7850 kg/m3

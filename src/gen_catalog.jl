@@ -72,7 +72,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
     n = length.([range_fc′, range_as, range_dps, range_fpe, range_type])
     @show ntotal = prod(n)
     #Pre allocating results
-    results = Matrix{Float64}(undef, prod(n), 9 + 2 + 3) #L t Lc
+    results = Matrix{Float64}(undef, prod(n), 10 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_type in eachindex(range_type)
@@ -108,7 +108,7 @@ function get_catalog(L, t, Lc; test=true)::DataFrame
                         idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe, idx_type]
 
                         idx = mapping(n, idx_all)
-                        results[idx, :] = [fc′, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
+                        results[idx, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
                     end
                 end
             end
@@ -132,7 +132,7 @@ end
 
 results = get_catalog(false)
 
-CSV.write(joinpath(@__DIR__, "Catalogs/FEB14_1_catalog_static.csv"), results)
+CSV.write(joinpath(@__DIR__, "Catalogs/FEB23_1_catalog_static.csv"), results)
 
 
 
