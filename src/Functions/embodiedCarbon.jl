@@ -1,21 +1,36 @@
 #Functions associated with embodied carbon
 
 """
-    fc2e(fc′::Real)::Float64
-Return embodied carbon coefficient of concrete based on fc′ [kgCO2e/m3]
-"""
-function fc2e(fc′::Real)::Float64
-    #only valid up to 60MPa.
-    # cfc = -0.0626944435544512 * fc′^2 + 10.0086510099949 * fc′ + 84.14807
+    fc2e(fc′::Real)::Float64 [kgCO2e/m3]
+Return embodied carbon coefficient of concrete based on fc′ 
 
+
+"""
+function fc2e(fc′::Real; mode::String = "default")::Float64
+    if mode =="default"
     #data on 25-80 MPa -> linearly interpolated to 100MPa.
     cfc = 1.6947*fc′ + 267.53
+
+    elseif mode == "Holcim fiber"
+    #only valid up to 60MPa.
+    # cfc = -0.0626944435544512 * fc′^2 + 10.0086510099949 * fc′ + 84.14807
+    else 
+        println("Invalid Mode")
+        return nothing
+    end
 
    return cfc
 end
 
+
+""" fc2e(fc′::Real, dosage::Real)::Float64 [kgCO2e/m3]
+Get the embodied carbon coefficient of a concrete mix with steel fiber dosage
+"""
 function fc2e(fc′::Real, dosage::Real)::Float64
-    cfc = fc2c(fc′) + rebar2e()*dosage()
+    cfc = fc2c(fc′) + 1.4*dosage 
+    return cfc
+end
+
 
 """
     rebar2e()::Float64
@@ -24,9 +39,9 @@ input : no input
 output: ecc of rebar [kgCO2e/m3]
 """
 function rebar2e()::Float64
-    # 0.854 kgCO2e per kg steel
-    # 7850 kg/m3
-    cst = 0.854*7850 #kgCO2e/m3
+    # 1.4 kgCO2e per kg steel (EC3)
+    # 7850 kg/m3 ASTM A992 
+    cst = 1.4*7850 #kgCO2e/m3
     return cst
 end
 
