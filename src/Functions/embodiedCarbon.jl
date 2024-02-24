@@ -45,13 +45,12 @@ function rebar2e()::Float64
     return cst
 end
 
-using Makie, GLMakie
-f1 = Figure(size = (100,100))
-ax1 = Axis(f1[1,1])
+using Makie
 
-fc′ = 0:0.01:200
-cfc = fc2e.(fc′)
+f_fc′_EC = Figure(size = (500,500)) 
+ax1 = Axis(f_fc′_EC[1,1])
 
-scatter!(ax1, fc′, cfc)
-vlines!(ax1, 60)
-f1
+fc′ = 20:0.5:100
+ec = fc2e.(fc′)
+
+scatter!(ax1, fc′, ec)
