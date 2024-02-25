@@ -1,7 +1,6 @@
 include("../Functions/Geometry/pixelgeo.jl")
 include("../Functions/embodiedcarbon.jl")
-
-
+using Printf
 """
 Beta 1 value for reinforced concrete compression section calculation
 """
