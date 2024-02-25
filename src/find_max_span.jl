@@ -59,6 +59,9 @@ for x in range(1,10)
             fc′[i] = set_fc′
             fR1[i] = set_fR1
             fR3[i] = set_fR3
+
+            #create a PixelFrame section
+            
             
             
 

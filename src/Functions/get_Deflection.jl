@@ -3,7 +3,8 @@ using UnPack
 include("definition.jl") #Will have to merge this with the normal stuff.
 include("functions.jl")
 include("interpolations.jl")
-include("structuralelement.jl")
+include("generalfunctions.jl")
+# include("structuralelement.jl")
 
 """
 Todo:

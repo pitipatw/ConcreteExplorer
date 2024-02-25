@@ -27,7 +27,7 @@ println("File version $filename")
 begin
 	include("Functions/definition.jl");
 	include("Functions/functions.jl");
-	include("Functions/structuralelement.jl")
+	# include("Functions/structuralelement.jl")
 	include("Functions/generalfunctions.jl")
 
 	include("Functions/get_Deflection.jl")
