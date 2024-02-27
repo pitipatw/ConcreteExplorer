@@ -25,14 +25,15 @@ all_sections
 ns = size(all_sections)[1]
 
 f_all_sections = Figure(size = (500,500))
-ax1 = Axis(f_all_sections[1,1], title = "L vs Lc", xlabel = "L [mm]", ylabel = "Lc [mm]") 
-ax2 = Axis(f_all_sections[1,2], title = "t vs Lc",  xlabel = "t [mm]", ylabel = "L [mm]") 
-ax3 = Axis(f_all_sections[2,1], title = "L` vs t", xlabel = "L [mm]", ylabel = "t [mm]") 
+ax1 = Axis(f_all_sections[1,1], title = "L vs t", xlabel = "L [mm]", ylabel = "t [mm]") 
+ax2 = Axis(f_all_sections[1,2], title = "Lc vs t",  xlabel = "Lc [mm]", ylabel = "t [mm]") 
+ax3 = Axis(f_all_sections[2,1], title = "L` vs Lc", xlabel = "L [mm]", ylabel = "Lc [mm]") 
 ax4 = f_all_sections[2,2] = GridLayout()
 
 s1 = scatter!(ax1, all_sections[:,1], all_sections[:,2])
 s2 = scatter!(ax2, all_sections[:,3], all_sections[:,2])
 s3 = scatter!(ax3, all_sections[:,1], all_sections[:,3])
+f_all_sections
 #=============================================================================#
 #=============================================================================#
 #=============================================================================#
@@ -41,7 +42,7 @@ set_fc′ = [40.0, 60.0, 80.0]
 set_fR1 = [2.97, 3.84, 5.11]
 set_fR3 = [3.50, 4.45, 5.73]
 
-set_as = 2*[99.0, 140.0]
+set_as = [99.0, 140.0]
 set_fpe = 0:1860/2:1860
 set_spans = 4000:500:8000
 
@@ -84,10 +85,11 @@ for i_section in 1:ns
                     #vu = get_Vu(pixelframesection)
                     as = sum(pt_area)
                     mu = get_Mu(section, fc′, as, fpe, dps, L) #kNm
-                    vu = get_Vu(section, fc′, fR1, fR3, as, fpe, L,) #kN
-
                     #turn mu to kNmm
                     mu = mu*1000
+                    vu = get_Vu(section, fc′, fR1, fR3, as, fpe, L,) #kN
+
+
                     #Get max span length from point load.
                     for i_span in eachindex(set_spans) 
                         global n_output +=1 
@@ -123,7 +125,7 @@ for i_section in 1:ns
 end
 println("There are ",n_output)
 
-open("src//Results//26_02_span.json","w") do f
+open("src//Results//27_02_span.json","w") do f
     JSON.print(f, output)
 end
 
