@@ -6,7 +6,7 @@
 
 #load the different L, t, Lc. 
 
-using CSV, JSON, DataFrames
+using CSV, JSON, DataFrames, JSON
 using Makie, GLMakie
 include("Functions//Geometry//pixelgeo.jl")
 include("Functions//capacities.jl")
@@ -43,7 +43,7 @@ set_fR3 = [3.50, 4.45, 5.73]
 
 set_as = 2*[99.0, 140.0]
 set_fpe = 0:1860/2:1860
-set_spans = 1000:5000:12000
+set_spans = 4000:500:8000
 
 
 n = prod([length.([set_fc′, set_as, set_fpe, set_spans]);ns])
@@ -89,7 +89,7 @@ for i_section in 1:ns
                     #turn mu to kNmm
                     mu = mu*1000
                     #Get max span length from point load.
-                    for i_spasn in eachindex(set_spans) 
+                    for i_span in eachindex(set_spans) 
                         global n_output +=1 
 
                         span = set_spans[i_span]
@@ -106,7 +106,7 @@ for i_section in 1:ns
                         this_result = Dict("fc′"=> fc′, "fR1"=> fR1, "fR3"=> fR3, 
                                         "fpe" => fpe, "as" => as, "dps" => dps,
                                         "load" => load, "span" => span,
-                                        "L" => L , "t" => "t" , "Lc" => Lc,
+                                        "L" => L , "t" => t , "Lc" => Lc,
                                         "control" => control
                                         )
                         if haskey(output, i_section)
@@ -123,50 +123,9 @@ for i_section in 1:ns
 end
 println("There are ",n_output)
 
-
-#visualziaing the result. 
-
-f_output = Figure(size = (500,500))
-ax1 = Axis(f_output[1,1], title = "ID vs Sections")
-ax2 = Axis(f_output[1,2], title = "Span vs Load")
-loads = Vector{Float64}(undef, n_output)
-idx = Vector{Float64}(undef, n_output)
-span = Vector{Symbol}(undef, n_output)
-check = Vector{Symbol}(undef, n_output)
-global count = 0
-for i in 1:100
-    # L,t,Lc = all_sections[i,:]
-    for configs in output[i]
-        global count +=1 
-        loads[count] = configs["load"]
-        stat  = configs["control"]
-        if stat == "Shear control"
-            check[count] = :red
-        elseif stat == "Moment control"
-            check[count] = :blue 
-        end
-
-        idx[count] = i
-
-
-    end
+open("src//Results//26_02_span.json","w") do f
+    JSON.print(f, output)
 end
-
-scatter!(ax1, idx, loads, color = check)
-scatter!()
-f_output
-
-
-f_all_sections
-
-# find capacity of the section 
-
-
-
-
-
-
-
 
 # results
 
