@@ -77,18 +77,24 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     fps = minimum([fps1, fps2, fps3])
 
     #concrete compression area balanced with steel tension force.
-    acomp = as * fps / (0.85 * fc′)
-    if acomp > ac 
-        println("Acomp exceeds Ac, using Ac instead")
-        acomp = ac
-        #re-calculate fps 
-        fps = acomp*0.85*fc′/as 
-        @assert acomp == as * fps / (0.85 * fc′)
-    end
+    acomp = clamp(as * fps / (0.85 * fc′),0, 0.99*ac)
+    # if acomp > ac 
+    #     println("Acomp exceeds Ac, using Ac instead")
+    #     #Would be better to use the actual ac.
+    #     acomp = 0.99*ac
+    #     #re-calculate fps 
+    #     @assert acomp == 0.99*as * fps / (0.85 * fc′)
+    # end
 
+    fps = acomp*0.85*fc′/as 
 
     #depth is from the top most of the section
     c = depth_from_area(compoundsection,acomp,show_stats = false ) #local
+
+
+
+
+
 
     #find depth at global coordinates
     ymax = compoundsection.ymax #global coordinate

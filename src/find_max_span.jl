@@ -14,44 +14,44 @@ include("Functions/generalfunctions.jl")
 sections = JSON.parsefile(joinpath(@__DIR__,"pixel_sample.json"), dicttype = Dict{String,Float64});
 
 all_sections =Matrix{Float64}(undef, length(sections), 3)
-results = Dict{Vector, Vector}()
+# results = Dict{Vector, Vector}()
 for i in eachindex(sections)
     val = 1000*[sections[i]["L"], sections[i]["t"], sections[i]["Lc"]]
     all_sections[i,:] = val
-    results[val] = []
+    # results[val] = []
 end
 
 all_sections
 ns = size(all_sections)[1]
 
 f_all_sections = Figure(size = (500,500))
-ax1 = Axis(f_all_sections[1,1], title = "L vs Lc") 
-ax2 = Axis(f_all_sections[1,2], title = "L vs t") 
-ax3 = Axis(f_all_sections[2,1], title = "t vs Lc") 
+ax1 = Axis(f_all_sections[1,1], title = "L vs Lc", xlabel = "L [mm]", ylabel = "Lc [mm]") 
+ax2 = Axis(f_all_sections[1,2], title = "t vs Lc",  xlabel = "t [mm]", ylabel = "L [mm]") 
+ax3 = Axis(f_all_sections[2,1], title = "L` vs t", xlabel = "L [mm]", ylabel = "t [mm]") 
 ax4 = f_all_sections[2,2] = GridLayout()
 
 s1 = scatter!(ax1, all_sections[:,1], all_sections[:,2])
-s2 = scatter!(ax2, all_sections[:,1], all_sections[:,3])
-s3 = scatter!(ax3, all_sections[:,2], all_sections[:,3])
-xgrid = ns/10 
-ygrid = ns/10
+s2 = scatter!(ax2, all_sections[:,3], all_sections[:,2])
+s3 = scatter!(ax3, all_sections[:,1], all_sections[:,3])
+#=============================================================================#
+#=============================================================================#
+#=============================================================================#
 
 set_fc′ = [40.0, 60.0, 80.0]
 set_fR1 = [2.97, 3.84, 5.11]
 set_fR3 = [3.50, 4.45, 5.73]
 
-set_as = [99.0, 140.0]
-set_fpe = 0:1860/10:1860
+set_as = 2*[99.0, 140.0]
+set_fpe = 0:1860/2:1860
+set_spans = 1000:5000:12000
 
-set_spans = 1000:500:12000
 
-# n = prod(length.([set_fc′, set_as, set_fpe, set_spans]),ns)
+n = prod([length.([set_fc′, set_as, set_fpe, set_spans]);ns])
 output = Dict{Int64,Vector{Dict{String, Union{Real,String}}}}()
-global count = 0 
-for i_section in 1:100
-    global count += 1 
-    span = 0
-    L,t,Lc = all_sections[count,:]
+
+global n_output = 0
+for i_section in 1:ns
+    L,t,Lc = all_sections[i_section,:]
     section = make_Y_layup_section(L,t,Lc)
 
     #viz section (ongoing)
@@ -61,7 +61,7 @@ for i_section in 1:100
     #     poly!(s.points)
     # end
 
-    set_dps = 0:L/10:L
+    set_dps = L/3:L/6:L
 
 
     for i_fc′ in range(1,3)
@@ -83,11 +83,15 @@ for i_section in 1:100
                     #mu = get_Mu(pixelframesection)
                     #vu = get_Vu(pixelframesection)
                     as = sum(pt_area)
-                    mu = get_Mu(section, fc′, as, fpe, dps, L)
-                    vu = get_Vu(section, fc′, fR1, fR3, as, fpe, L,)
+                    mu = get_Mu(section, fc′, as, fpe, dps, L) #kNm
+                    vu = get_Vu(section, fc′, fR1, fR3, as, fpe, L,) #kN
 
+                    #turn mu to kNmm
+                    mu = mu*1000
                     #Get max span length from point load.
-                    for i_span in eachindex(set_spans) 
+                    for i_spasn in eachindex(set_spans) 
+                        global n_output +=1 
+
                         span = set_spans[i_span]
                         #Moment = PL/4
                         max_f_mu = 4*mu/span
@@ -103,11 +107,12 @@ for i_section in 1:100
                                         "fpe" => fpe, "as" => as, "dps" => dps,
                                         "load" => load, "span" => span,
                                         "L" => L , "t" => "t" , "Lc" => Lc,
+                                        "control" => control
                                         )
-                        if haskey(output, count)
-                            push!(output[count],this_result)
+                        if haskey(output, i_section)
+                            push!(output[i_section],this_result)
                         else 
-                            output[count] = [this_result]
+                            output[i_section] = [this_result]
                         end
 
                     end
@@ -116,21 +121,40 @@ for i_section in 1:100
         end
     end
 end
-            
+println("There are ",n_output)
+
+
 #visualziaing the result. 
 
 f_output = Figure(size = (500,500))
-ax1 = Axis(f_output[1,1], title = "Span vs Sections")
-
+ax1 = Axis(f_output[1,1], title = "ID vs Sections")
+ax2 = Axis(f_output[1,2], title = "Span vs Load")
+loads = Vector{Float64}(undef, n_output)
+idx = Vector{Float64}(undef, n_output)
+span = Vector{Symbol}(undef, n_output)
+check = Vector{Symbol}(undef, n_output)
+global count = 0
 for i in 1:100
     # L,t,Lc = all_sections[i,:]
     for configs in output[i]
-        scatter!(ax1, i, configs["laod"])
+        global count +=1 
+        loads[count] = configs["load"]
+        stat  = configs["control"]
+        if stat == "Shear control"
+            check[count] = :red
+        elseif stat == "Moment control"
+            check[count] = :blue 
+        end
+
+        idx[count] = i
+
+
     end
 end
 
-
-
+scatter!(ax1, idx, loads, color = check)
+scatter!()
+f_output
 
 
 f_all_sections
