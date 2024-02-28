@@ -1,10 +1,13 @@
+module EngineeringWorkflows
+
+include("Geometry/pixelgeo.jl")
 abstract type AbstractStructuralElement end 
 abstract type AbstractPixelFrameElement <: AbstractStructuralElement end 
 
 abstract type AbstractStructuralSection end 
 abstract type AbstractPixelFrameSection <: AbstractStructuralSection end
 
-include("Geometry/pixelgeo.jl")
+
 
 """
     PixelFrameElement
@@ -208,4 +211,6 @@ function pixelframe_properties!(pixelframesection::AbstractPixelFrameSection)::A
     return pixelframesection
 end
 
+
+end
 

@@ -7,7 +7,7 @@ GLMakie.activate!()
 
 
 
-results = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame);
+results = CSV.read("src/Catalogs/FEB27_1_catalog_static.csv", DataFrame);
 # results = results[1:10,:]
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
