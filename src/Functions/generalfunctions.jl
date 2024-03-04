@@ -1,6 +1,6 @@
-module EngineeringWorkflows
 
 include("Geometry/pixelgeo.jl")
+
 abstract type AbstractStructuralElement end 
 abstract type AbstractPixelFrameElement <: AbstractStructuralElement end 
 
@@ -122,8 +122,65 @@ mutable struct PixelFrameElement <: AbstractPixelFrameElement
     """
         (To do)Create PixelFrame element from a vector of PixelFrameSection
     """
-    # function pixelframeelement(pixelframesections::Vector{PixelFrameSection})
-    #     """
+    function pixelframeelement(pixelframesections::Vector{PixelFrameSection})
+        sections = getfield.(pixelframesections, )
+        compoundsection = make_Y_layup_section(141.7,19.1,25.2)
+        pixelframeelement = new([compoundsection]) #it takes a vector of compound section
+
+        #..........Notes..........
+        # Use Ld = Ls (this test only) 
+        # Eccentricities measured from the neutral axis
+        # M is the moment in the constant region
+        # Mg = moment due to the selfweight
+        # M(x) is the moment equation due to the load
+        #Units N, mm, MPa
+
+        #   Material Properties
+        pixelframeelement.fc′ = 36.0 # Concrete strength [MPa] ****Should update on the test day using cylinder test***
+        # Ec = 4700.0*sqrt(fc′) # MPa  ACI fc-> Concrete modulus relationship [MPa]
+        pixelframeelement.Ec = 58000.0 # MPa  from the cylinder test
+        pixelframeelement.Eps = 70000.0 #Post tensioning steel modulus [MPa]
+        pixelframeelement.fpy = 0.002 * pixelframeelement.Eps #MPa  
+        #Safe load on the website https://www.engineeringtoolbox.com/wire-rope-strength-d_1518.html 
+        # is ~ 150 MPa. Currently 140 MPa :)
+
+        # PixelFrame section/element properties
+        centroid_to_top = 91.5 #[mm]
+        pixelframeelement.em = 230.0 # Eccentricity at the middle of the member [mm]
+        pixelframeelement.es = 0.0 # Eccentricity at the support of the member   [mm]
+        pixelframeelement.em0 = 230.0 # Initial eccentricity at the midspan        [mm]
+
+        pixelframeelement.dps0 = centroid_to_top + pixelframeelement.em0 # Initial distance from the top to the point of application of the load [mm]
+        pixelframeelement.Ls = 502.7 # Distance from support to the first load point [mm]
+        pixelframeelement.Ld = 502.7 # Distance from support to the first deviator [mm]
+        pixelframeelement.L = 2000.0 # Total length of the member [mm]
+        # two 1/4" bars with 1200 lb capacity
+        pixelframeelement.Aps = 2.0 * (0.25 * 25.4)^2 * pi / 4.0 # Total area of the post tensioned steel [mm2]
+        #Pure concrete area = 18537.69 mm2
+        #Transformed steel area = 347.96 mm2 
+        pixelframeelement.Atr = 18537.69 # Transformed area of the cross section [mm2] (= Concrete area if there is no embedded rebars)
+        pixelframeelement.Itr = 6.4198e+07 #moment of inertia [mm4], no embedded steel, therefore, only from concrete.
+        # pixelframeelement.Itr = 1.082e+8 #this number includes deviated steels.
+
+        pixelframeelement.Zb = pixelframeelement.Itr/centroid_to_top # Elastic modulus of the concrete section from the centroid to extreme tension fiber [mm3]
+        # If there are multiple materials, transformed section geometry is needed for Zb (and everything related to section area)
+
+        #forces
+        pixelframeelement.w = pixelframeelement.Atr / 10^9 * 2400.0 * 9.81 # Selfweight [N/mm]
+        pixelframeelement.mg = pixelframeelement.w * pixelframeelement.L^2 / 8.0 # Moment due to selfweight [Nmm]
+        pixelframeelement.fr = 0.7 * sqrt(pixelframeelement.fc′) # Concrete cracking strenght [MPa]
+        pixelframeelement.r = sqrt(pixelframeelement.Itr / pixelframeelement.Atr) # Radius of gyration [mm]
+        pixelframeelement.ps_force = 890.0/sind(24.0) # Post tensioning force [N]
+        pixelframeelement.Mdec = pixelframeelement.ps_force*pixelframeelement.em
+        pixelframeelement.concrete_force = pixelframeelement.ps_force*cos(24.0*pi/180.0) # 
+        pixelframeelement.fpe = pixelframeelement.ps_force/pixelframeelement.Aps # Effective post tensioning stress [MPa] ***will input the one on the test day***
+        pixelframeelement.ϵpe = pixelframeelement.fpe / pixelframeelement.Eps # Effective post tensioning strain [mm/mm]
+        #find moment due to the applied force.
+        pixelframeelement.ϵce = pixelframeelement.ps_force*pixelframeelement.em/pixelframeelement.Zb/pixelframeelement.Ec - pixelframeelement.concrete_force/pixelframeelement.Atr/pixelframeelement.Ec # effetive strain in the concrete [mm/mm]
+        #for using test setup
+        pixelframeelement.test = true
+        return pixelframeelement
+    end
 
     #     """
     #     a = 1.0
@@ -133,42 +190,29 @@ end
 
 
 mutable struct PixelFrameSection <: AbstractPixelFrameSection
+    section::CompoundSection
     fc′::Float64
     fR1::Float64
     fR3::Float64
 
     pt_area::Vector{Float64}
     pt_force::Vector{Float64}
-    pt_pos::Matrix{Float64}
+    pt_pos::Matrix{  }
 
     #Material Properties
     Ec::Float64  
     Ept::Float64 #Modulus of the Post Tension steel
 
-    function PixelFrameSection(fc′::Real,fR1::Float64, fR3::Float64, pt_area::Vector{Float64}, pt_force::Vector{Float64}, pt_pos::Matrix{Float64})
+    function PixelFrameSection(L::Real, t::Real, Lc::Real, fc′::Real,fR1::Float64, fR3::Float64, pt_area::Vector{Float64}, pt_force::Vector{Float64}, pt_pos::Matrix{Float64})
         @assert size(pt_pos)[1] == 2 "Post tension steel position must be a 2xn Matrix{Float64}"
         @assert length(pt_area) === length(pt_force) "Mis-match numbers of post tensioned areas and forces"
         @assert length(pt_area) === size(pt_pos)[2] "Mis-match numbers of post tensioned areas and positions"
         @assert length(pt_force) === size(pt_pos)[2] "Mis-match numbers of post tensioned forces and positions"
         
+        section = make_Y_layup_section(L,t,Lc)
         Ec = 4700*sqrt(fc′) #MPa
         Ept = 200_000.0 #MPa
-        pixelframesection = new(fc′, fR1, fR3, pt_area, pt_force, pt_pos,Ec, Ept)
-        return pixelframesection
-    end
-
-    function PixelFrameSection(fc′::Real, pt_area::Vector{Float64}, pt_force::Vector{Float64}, pt_pos::Matrix{Float64})
-        @assert size(pt_pos)[1] == 2 "Post tension steel position must be a 2xn Matrix{Float64}"
-        @assert length(pt_area) === length(pt_force) "Mis-match numbers of post tensioned areas and forces"
-        @assert length(pt_area) === size(pt_pos)[2] "Mis-match numbers of post tensioned areas and positions"
-        @assert length(pt_force) === size(pt_pos)[2] "Mis-match numbers of post tensioned forces and positions"
-        
-        fR1 = 0.0
-        fR3 = 0.0
-        Ec = 4700*sqrt(fc′) #MPa
-        Ept = 200_000.0 #MPa
-    
-        pixelframesection = new(fc′, fR1, fR3, pt_area, pt_force, pt_pos,Ec, Ept)
+        pixelframesection = new(section,fc′, fR1, fR3, pt_area, pt_force, pt_pos,Ec, Ept)
         return pixelframesection
     end
 end 
@@ -211,6 +255,4 @@ function pixelframe_properties!(pixelframesection::AbstractPixelFrameSection)::A
     return pixelframesection
 end
 
-
-end
 
