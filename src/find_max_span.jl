@@ -38,14 +38,26 @@ f_all_sections
 #=============================================================================#
 #=============================================================================#
 
-set_fc′ = [40.0, 60.0, 80.0]
-set_fR1 = [2.97, 3.84, 5.11]
-set_fR3 = [3.50, 4.45, 5.73]
+#load definition [kN/m]
+#Concrete density = 2400 kg/m3 -> 24000 N/m3 -> 24 kN/m3
+#dead load = 24*section area + 24*bay*0.1 (10 cm thick floor) kN/m
+#live load = 2.4 kN/m2 - > 2.4 * bay kN/m
+
+fc′_path = "src//Tables//fc_fiber.csv"
+fc_fiber = CSV.read(fc′_path, DataFrame)
+#These come in a set of (fc′,fR1, fR3)
+set_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
+set_fR1 = fc_fiber[!, :fR1]
+set_fR3 = fc_fiber[!, :fR3]
+set_dosage = fc_fiber[!, :dosage]
+
+# set_fc′ = [40.0, 60.0, 80.0]
+# set_fR1 = [2.97, 3.84, 5.11]
+# set_fR3 = [3.50, 4.45, 5.73]
 
 set_as = [99.0, 140.0]
-set_fpe = 0:1860/2:1860
-set_spans = 4000:500:8000
-
+set_fpe = (0:0.1:1)*0.7*1860
+set_spans = 4000:500:15000
 
 n = prod([length.([set_fc′, set_as, set_fpe, set_spans]);ns])
 output = Dict{Int64,Vector{Dict{String, Union{Real,String}}}}()
@@ -89,33 +101,34 @@ for i_section in 1:ns
                     mu = mu*1000
                     vu = get_Vu(section, fc′, fR1, fR3, as, fpe, L,) #kN
 
+                    #from the available mu and vu, back calculate the maximum span 
 
-                    #Get max span length from point load.
-                    for i_span in eachindex(set_spans) 
-                        global n_output +=1 
+                    DL = section.area * 24 + 4000 * 0.1* .24
+                    LL = 2.4*4000 #4000 is the width of the bay.
 
-                        span = set_spans[i_span]
-                        #Moment = PL/4
-                        max_f_mu = 4*mu/span
+                    #1.2*DL  + 1.6 * LL  = load per m -> w 
+                    w = 1.2* DL  +  1.6*LL 
+                    #maximum moment in terms of w 
+                    # Mu = wl^2/8
+                    #Vu = wl/2 
 
-                        #Shear = P/2
-                        max_f_vu = 2*vu
+                    l_mu = sqrt(8*mu/w)
+                    l_vu = 2*vu/w 
 
-                        check = max_f_mu > max_f_vu 
-                        control = check ? "Shear control" : "Moment control"
-                        load = check ? max_f_vu : max_f_mu
+                    span = minimum(l_mu, l)_vu 
+                    status = l_mu < l_vu ? "Moment control" : "Shear control"
                         
-                        this_result = Dict("fc′"=> fc′, "fR1"=> fR1, "fR3"=> fR3, 
-                                        "fpe" => fpe, "as" => as, "dps" => dps,
-                                        "load" => load, "span" => span,
-                                        "L" => L , "t" => t , "Lc" => Lc,
-                                        "control" => control
-                                        )
-                        if haskey(output, i_section)
-                            push!(output[i_section],this_result)
-                        else 
-                            output[i_section] = [this_result]
-                        end
+                    this_result = Dict("fc′"=> fc′, "fR1"=> fR1, "fR3"=> fR3, 
+                                    "fpe" => fpe, "as" => as, "dps" => dps,
+                                    "span" => span,
+                                    "L" => L , "t" => t , "Lc" => Lc,
+                                    "control" => status
+                                    )
+                    if haskey(output, i_section)
+                        push!(output[i_section],this_result)
+                    else 
+                        output[i_section] = [this_result]
+                    end
 
                     end
                 end
