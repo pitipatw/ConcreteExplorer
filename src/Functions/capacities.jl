@@ -211,7 +211,7 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     wu = 1.5
     CMOD3 = 1.5
     ptforce = get_Pu(compoundsection, fc′, as, fpe)
-    ned = 1000*ptforce# can be different
+    ned = 1000*ptforce# N
     σcp1 = ned / ac
     σcp2 = 0.2 * fc′
     σcp = clamp(σcp1, 0.0, σcp2)
