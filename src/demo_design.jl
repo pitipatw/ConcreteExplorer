@@ -1,111 +1,65 @@
-### A Pluto.jl notebook ###
-# v0.19.38
 
-using Markdown
-using InteractiveUtils
 
-# ╔═╡ c1f919f6-5e0f-4f2a-9fbe-c7ae52b18c32
-begin
-	println(pwd())
-	using Pkg
-	# Pkg.activate("..")
-	using CSV
-	using DataFrames
-	using JSON
-	using Dates
-	using ProgressBars
-	using UnPack
-	using Makie, GLMakie
-	using AsapSections
-end
+
+println(pwd())
+using Pkg
+# Pkg.activate("..")
+using CSV
+using DataFrames
+using JSON
+using Dates
+using ProgressBars
+using UnPack
+using Makie, GLMakie
+using AsapSections
+
 
 filename ="FEB_23_03"
 println("File version $filename")
 
-# ╔═╡ e7416f5a-d161-46db-acd7-e9e69d822abf
-# ╠═╡ show_logs = false
-begin
-	include("Functions/definition.jl");
-	include("Functions/functions.jl");
-	# include("Functions/structuralelement.jl")
-	include("Functions/generalfunctions.jl")
 
-	include("Functions/get_Deflection.jl")
-	include("Functions/interpolations.jl");
-end;
+include("Functions/definition.jl");
+include("Functions/functions.jl");
+# include("Functions/structuralelement.jl")
+include("Functions/generalfunctions.jl")
 
-# ╔═╡ 98b2e2c0-c506-11ee-3000-a1f509a4a1a3
-md"""
+include("Functions/get_Deflection.jl")
+include("Functions/interpolations.jl");
+
+
+
+"""
 # PixelFrame Design Demo
 """
 
-# ╔═╡ 650cf5aa-1db9-4f28-8325-99ae27980e58
-md"""
+"""
 ###### To do list
 1. Embodied carbon on the actual tendon profile
 2. Turn everything into a gradient based optimization
-"""
 
-# ╔═╡ 02eb9acf-f1f2-496d-9784-b040ec96a4b3
-md"""
-Set up cell widths
-"""
 
-# ╔═╡ cfa1c5c7-3e01-40eb-9f56-e2169314c759
-html"""
-<style>main {max-width: 1200px;}</style>
-<style>pluto-output.scroll_y {max-height: 2000px;}</style>
-"""
-
-# ╔═╡ 716f779a-9ba3-44fa-a024-89e32eb8be0a
-md"""
-Load required packages
-"""
-
-# ╔═╡ 41fa7984-11cb-4da2-8772-bb1e4ca40a54
-md"""
 Load the design catalog
 Currently using version FEB6_4"""
 
-begin
-	catalog = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame); 
-	# sort!(catalog, [:carbon, :fc′, :as, :dps])
-	println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
-	println(catalog[1:20,:])
+catalog = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame); 
+# sort!(catalog, [:carbon, :fc′, :as, :dps])
+println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
+println(catalog[1:20,:])
+
+#load demands into a dictionary
+# demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
+demand_path = joinpath(@__DIR__, "Demands/0205Full_scale_test_demands.json");
+open(demand_path, "r") do f
+	global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
+	ns = size(demands)[1]
+	demands[!,:idx] = 1:ns
+	println("There are $ns points")
+	println("Demands were loads from:\n", demand_path)
 end
+println(demands[1:10,:])
 
 
-# ╔═╡ 29c3fa2f-b48c-46c1-a212-48111a6db980
-md"""
-Load the demand points
-"""
 
-# ╔═╡ 22bd3994-0398-40c8-a2e1-594ff367810e
-let
-	#load demands into a dictionary
-	# demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
-	demand_path = joinpath(@__DIR__, "Demands/0205Full_scale_test_demands.json");
-	open(demand_path, "r") do f
-		global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
-		ns = size(demands)[1]
-		demands[!,:idx] = 1:ns
-		println("There are $ns points")
-		println("Demands were loads from:\n", demand_path)
-	end
-	println(demands[1:10,:])
-end
-
-# demands_all = demands
-# 
-# demands = demands[1:16, :]
-
-# ╔═╡ d413107f-6aeb-4a94-a875-3907d240a633
-md"""
-From the plot, we can see that the element indices are not unique. (Different types of elements can have the same element index)
-"""
-
-# ╔═╡ f2f3ad13-fc3e-4705-8607-6c32e5d0e731
-let
 	println("Before Modifying the indices")
 @show old_min_e_idx = minimum(demands[!, "e_idx"]);
 @show old_min_s_idx = minimum(demands[!, "s_idx"]);
@@ -139,16 +93,13 @@ f_indices_check = Figure(size = (800,500))
 ax_indices_check = Axis(f_indices_check[1,1], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30)
 scatter!(ax_indices_check, demands[!, "idx"], demands[!, "e_idx"], color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check 
-end
+
 	
 
-# ╔═╡ 9fb65c0f-ec4b-45ca-863c-acfe79f19c5a
-md"""
+"""
 Make the element indices unique
 """
 
-# ╔═╡ 4cad732a-0ce9-4031-8cf1-d2df4c1b8502
-let
 global e_idx = 1 
 for i in 1:size(demands)[1]
     if i !=1
@@ -162,11 +113,9 @@ for i in 1:size(demands)[1]
         demands[i, :e_idx] = e_idx
     end
 end
-end
 
 
-# ╔═╡ 712343fd-57c2-4856-9f77-77ceca3c30bb
-let
+
 f_indices_check_mod = Figure(size = (1600,500))
 ax_indices_check_mod = Axis(f_indices_check_mod[1,1], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30,
 title = "Modified element indices")
@@ -179,14 +128,11 @@ scatter!(ax_indices_check_mod, demands[!, "idx"], demands[!, "e_idx"],color = [c
 scatter!(ax_section_indices_check_mod, demands[!, "idx"], demands[!, "s_idx"],color = [color_mapping[t] for t in demands[!,:type]])
 scatter!(ax_dps, demands[!, "idx"], demands[!, "ec_max"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check_mod 
-end
-# ╔═╡ 66fea01a-ce03-4996-bd91-b6d9e91c5305
-md"""
+
+"""
 Visualize the demand points
 """
 
-# ╔═╡ e2f306fe-7559-4856-a8b3-3757cf7fa29a
-let
 f1 = Figure(size = (1000,1000))
 mu_max = 1.2*maximum(demands[!, :mu])
 vu_max = 1.2*maximum(demands[!, :vu])
@@ -216,11 +162,10 @@ hist!(ax5, demands[!, :mu], color = :red, bins = 20)
 hist!(ax6, catalog[!, :Mu], color = :blue, bins = 20)
 	
 f1
-end
 
 
-# ╔═╡ bbbd5490-8c87-452e-976b-b6f44f91e438
-md"""
+
+"""
 Define 2 functions
 1. filter_demands(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Vector{Int64}}
 Output => all-feasible-sections \
@@ -229,7 +174,6 @@ For each demand point, filter the feasible catalog entries and output as a dicti
 Output => element_designs, elements_to_sections, sections_to_designs. which are Dictionaries of "first" to "second" indices.
 """
 
-# ╔═╡ ae3344d1-89b2-42a0-b572-50bc7fc8dbd9
 """
 	filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Vector{Int64}}
 For each demand point, get the feasible configuration from the catalog.
@@ -277,25 +221,6 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
     return all_feasible_sections
 end
 
-
-# ╔═╡ d02089f3-5123-4cdb-8f5f-810a393e5e4e
-# begin 
-# 	ne = unique(demands[!, :e_idx])
-# 	elements_to_sections = Dict(k => Int[] for k in ne)
-# 	for i in 1:size(demands)[1]
-# 		en = demands[i, :e_idx]
-# 		# sn = demands[i, "s_idx"]
-# 		push!(elements_to_sections[en], demands[i, :idx])
-# 	end
-# 	println("Elements -> Sections in them")
-# 	for i in 1:size(unique(demands[!, :e_idx]))[1]
-# 		println(i, " => ",elements_to_sections[i])
-# 	end
-# end
-
-
-
-# ╔═╡ 0d5119c9-8874-4efd-8400-22c359b804cf
 """
 	function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame)
 Find the optimum result for each element.
@@ -418,8 +343,8 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            sections_designs[is] = collect(catalog[select_ID, :])
 	        end
 
-			# #Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
-	  #       #Create a pixelframeelement and/or section here with the given parameters 
+			# Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
+	        # Create a pixelframeelement and/or section here with the given parameters 
 	  #       L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
 	  #       compoundsection =  make_Y_layup_section(L, t, Lc)
 	  #       pixelframeelement = PixelFrameElement() 
@@ -533,10 +458,6 @@ for i in 1:length(all_feasible_sections)
 	println(length(all_feasible_sections[i]))
 end
 
-# ╔═╡ 0176e9c5-de48-4163-9cfb-b909177869dc
-# println(all_feasible_sections)
-
-# ╔═╡ 5df9ac50-bdef-4cfb-845f-8d84b9be1ef8
 elements_designs, elements_to_sections, sections_to_designs  = find_optimum(all_feasible_sections, demands)
 println(elements_designs)
 
@@ -654,125 +575,81 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	axs_shear.yticklabelspace = yspace
 	
 	f1
-	
 	return f1
+end
+	
+
+#test 
+plot_element(1, designs)
+
+for i in 1:19
+	f = plot_element(i, designs)
+	save("src/Results/Results6/$i.png",f)
+end
+
+#summarize the result. 
+function get_design_properties(sections_to_designs::Dict{Int64, Vector{Float64}}, idx::Int64)
+	output = Vector{Float64}(undef, length(sections_to_designs))
+	for i in eachindex(sections_to_designs)
+		@show i
+		output[i] = sections_to_designs[i][idx]
 	end
-	
-
-	#test 
-	plot_element(1, designs)
-	
-	for i in 1:19
-		f = plot_element(i, designs)
-		save("src/Results/Results6/$i.png",f)
-	end
-
-	#summarize the result. 
-	function get_design_properties(sections_to_designs::Dict{Int64, Vector{Float64}}, idx::Int64)
-		output = Vector{Float64}(undef, length(sections_to_designs))
-		for i in eachindex(sections_to_designs)
-			@show i
-			output[i] = sections_to_designs[i][idx]
-		end
-		return output
-	end
-
-
-	
-	all_fc′  = get_design_properties(sections_to_designs,1)
-	all_dosage = get_design_properties(sections_to_designs,2)
-	all_fR1  = get_design_properties(sections_to_designs,3)
-	all_fR3  = get_design_properties(sections_to_designs,4)
-	all_as   = get_design_properties(sections_to_designs,5)
-	all_dps  = get_design_properties(sections_to_designs,6)
-	all_fpe  = get_design_properties(sections_to_designs,7)
-	stack_name = hcat(string.(all_fc′,"_", all_fR1,"_", all_fR3, "_", all_dosage))
-	@show unique_stack_name = unique(stack_name)
-	MK_file_prep = DataFrame(:fc′ => all_fc′, :fR1 => all_fR1, :fR3=>all_fR3, :dosage => all_dosage)
-
-	csv_fc′ = Vector{Float64}()
-	csv_dosage = Vector{Real}()
-	csv_fR1 = Vector{Float64}()
-	csv_fR3 = Vector{Float64}()
-
-	for i in 1:length(unique_stack_name)
-		@show vals = parse.(Float64,split(unique_stack_name[i], "_"))
-		@show typeof(vals[1])
-		@show typeof(vals[2])
-		@show typeof(vals[3])
-		push!(csv_fc′, vals[1])
-		push!(csv_fR1, vals[2])
-		push!(csv_fR3, vals[3])
-		push!(csv_dosage, vals[4])
-
-	end
-	
-	csv_output = DataFrame(:fc′=> csv_fc′, :dosage=> csv_dosage, :fR1=> csv_fR1, :fR3=>csv_fR3)
-	CSV.write(joinpath(@__DIR__, "mix_specs.csv"), csv_output)
-	
-	
-	
-	#each pair, plots them dots and x and a line connecting them together. 
-
-	f_final = Figure(size= (500,500))
-	ax1 = Axis(f_final[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = "Demands vs Designs")
-	demand_points = hcat(demands[!, :mu] , demands[!,:vu])
-	design_points = hcat(get_design_properties(sections_to_designs,9),get_design_properties(sections_to_designs,10))
-	for i in 1:size(demand_points)[1]
-		x1 = demand_points[i,1]
-		y1 = demand_points[i,2]
-		x2 = design_points[i,1]
-		y2 = design_points[i,2]
-		@assert x2>x1
-		@assert y2>y1 i
-		u = x2-x1
-		v = y2-y1
-		arrows!([x1],[y1],[u],[v], arrowsize = 5)
-	end
-	scatter!(ax1, demand_points[:,1],demand_points[:,2], color = :red, markersize = 10)
-	scatter!(ax1, design_points[:,1],design_points[:,2], color = all_fc′, market_size = 10)
-
-	f_final
+	return output
+end
 
 
 
-	# f = Figure(size = (800, 800))
-	# Axis(f[1, 1], backgroundcolor = "black")
-	
-	# xs = LinRange(0, 2pi, 20)
-	# ys = LinRange(0, 3pi, 20)
-	# us = [sin(x) * cos(y) for x in xs, y in ys]
-	# vs = [-cos(x) * sin(y) for x in xs, y in ys]
-	# strength = vec(sqrt.(us .^ 2 .+ vs .^ 2))
-	
-	# arrows!(xs, ys, us, vs, arrowsize = 10, lengthscale = 0.3,
-	# 	arrowcolor = strength, linecolor = strength)
-	
-	# f
+all_fc′  = get_design_properties(sections_to_designs,1)
+all_dosage = get_design_properties(sections_to_designs,2)
+all_fR1  = get_design_properties(sections_to_designs,3)
+all_fR3  = get_design_properties(sections_to_designs,4)
+all_as   = get_design_properties(sections_to_designs,5)
+all_dps  = get_design_properties(sections_to_designs,6)
+all_fpe  = get_design_properties(sections_to_designs,7)
+stack_name = hcat(string.(all_fc′,"_", all_fR1,"_", all_fR3, "_", all_dosage))
+@show unique_stack_name = unique(stack_name)
+MK_file_prep = DataFrame(:fc′ => all_fc′, :fR1 => all_fR1, :fR3=>all_fR3, :dosage => all_dosage)
 
-# ╔═╡ Cell order:
-# ╟─98b2e2c0-c506-11ee-3000-a1f509a4a1a3
-# ╟─650cf5aa-1db9-4f28-8325-99ae27980e58
-# ╟─02eb9acf-f1f2-496d-9784-b040ec96a4b3
-# ╠═cfa1c5c7-3e01-40eb-9f56-e2169314c759
-# ╟─716f779a-9ba3-44fa-a024-89e32eb8be0a
-# ╠═c1f919f6-5e0f-4f2a-9fbe-c7ae52b18c32
-# ╠═e7416f5a-d161-46db-acd7-e9e69d822abf
-# ╟─41fa7984-11cb-4da2-8772-bb1e4ca40a54
-# ╠═f074d05a-4a52-485f-b0cb-4a79a6fa42b3
-# ╟─29c3fa2f-b48c-46c1-a212-48111a6db980
-# ╠═22bd3994-0398-40c8-a2e1-594ff367810e
-# ╟─d413107f-6aeb-4a94-a875-3907d240a633
-# ╠═f2f3ad13-fc3e-4705-8607-6c32e5d0e731
-# ╟─9fb65c0f-ec4b-45ca-863c-acfe79f19c5a
-# ╠═4cad732a-0ce9-4031-8cf1-d2df4c1b8502
-# ╠═712343fd-57c2-4856-9f77-77ceca3c30bb
-# ╟─66fea01a-ce03-4996-bd91-b6d9e91c5305
-# ╠═e2f306fe-7559-4856-a8b3-3757cf7fa29a
-# ╟─bbbd5490-8c87-452e-976b-b6f44f91e438
-# ╠═ae3344d1-89b2-42a0-b572-50bc7fc8dbd9
-# ╠═d02089f3-5123-4cdb-8f5f-810a393e5e4e
-# ╠═0d5119c9-8874-4efd-8400-22c359b804cf
-# ╠═df8a7202-49c9-4e8a-81eb-aa63cc410888
-# ╠═0176e9c5-de48-4163-9cfb-b909177869dc
-# ╠═5df9ac50-bdef-4cfb-845f-8d84b9be1ef8
+csv_fc′ = Vector{Float64}()
+csv_dosage = Vector{Real}()
+csv_fR1 = Vector{Float64}()
+csv_fR3 = Vector{Float64}()
+
+for i in 1:length(unique_stack_name)
+	@show vals = parse.(Float64,split(unique_stack_name[i], "_"))
+	@show typeof(vals[1])
+	@show typeof(vals[2])
+	@show typeof(vals[3])
+	push!(csv_fc′, vals[1])
+	push!(csv_fR1, vals[2])
+	push!(csv_fR3, vals[3])
+	push!(csv_dosage, vals[4])
+
+end
+
+csv_output = DataFrame(:fc′=> csv_fc′, :dosage=> csv_dosage, :fR1=> csv_fR1, :fR3=>csv_fR3)
+CSV.write(joinpath(@__DIR__, "mix_specs.csv"), csv_output)
+
+
+
+#each pair, plots them dots and x and a line connecting them together. 
+
+f_final = Figure(size= (500,500))
+ax1 = Axis(f_final[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = "Demands vs Designs")
+demand_points = hcat(demands[!, :mu] , demands[!,:vu])
+design_points = hcat(get_design_properties(sections_to_designs,9),get_design_properties(sections_to_designs,10))
+for i in 1:size(demand_points)[1]
+	x1 = demand_points[i,1]
+	y1 = demand_points[i,2]
+	x2 = design_points[i,1]
+	y2 = design_points[i,2]
+	@assert x2>x1
+	@assert y2>y1 i
+	u = x2-x1
+	v = y2-y1
+	arrows!([x1],[y1],[u],[v], arrowsize = 5)
+end
+scatter!(ax1, demand_points[:,1],demand_points[:,2], color = :red, markersize = 10)
+scatter!(ax1, design_points[:,1],design_points[:,2], color = all_fc′, market_size = 10)
+
+f_final
