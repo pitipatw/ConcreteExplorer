@@ -31,7 +31,8 @@ end
 get axial capacity of a section
 output: P[kN]
 """
-function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64)
+function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, fpe::Float64;
+    Ep::Int64 = 200_000)
 
      #concrete area
      ac = compoundsection.area
@@ -46,7 +47,7 @@ function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
      ccn = 0.85 * fc′ * ac
      #*need a justification on 0.003 Eps
      # pn = (ccn - (fpe - 0.003 * Eps) * as) / 1000 # convert to [kN]
-     pn = (ccn - fpe* as)
+     pn = (ccn - (fpe-0.003*Ep)* as)
      pu = 0.65 * 0.8 * pn /1000 #[kN]
      
      return pu
@@ -210,7 +211,7 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     fFts = 0.45 * fR1
     wu = 1.5
     CMOD3 = 1.5
-    ptforce = get_Pu(compoundsection, fc′, as, fpe)
+    ptforce = fpe*as #get_Pu(compoundsection, fc′, as, fpe)
     ned = 1000*ptforce# N
     σcp1 = ned / ac
     σcp2 = 0.2 * fc′
