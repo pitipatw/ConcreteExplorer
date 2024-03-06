@@ -1,6 +1,3 @@
-
-
-
 println(pwd())
 using Pkg
 # Pkg.activate("..")
@@ -11,19 +8,16 @@ using Dates
 using ProgressBars
 using UnPack
 using Makie, GLMakie
-using AsapSections
+using AsapToolkit #, kjlMakie
 
-
-filename ="FEB_23_03"
-println("File version $filename")
-
+# set_theme!(kjl_light)
 
 include("Functions/definition.jl");
 include("Functions/functions.jl");
 # include("Functions/structuralelement.jl")
-include("Functions/generalfunctions.jl")
+include("Functions/generalfunctions.jl");
 
-include("Functions/get_Deflection.jl")
+include("Functions/get_Deflection.jl");
 include("Functions/interpolations.jl");
 
 
@@ -36,15 +30,16 @@ include("Functions/interpolations.jl");
 ###### To do list
 1. Embodied carbon on the actual tendon profile
 2. Turn everything into a gradient based optimization
+"""
+
+filename ="MAR_05_01"
+imagesavepath = "src//Images//Demo//"
+println("File version $filename")
 
 
-Load the design catalog
-Currently using version FEB6_4"""
-
-catalog = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame); 
-# sort!(catalog, [:carbon, :fc′, :as, :dps])
-println("The catalog was sorted by ascending order from:\ncarbon -> fc′ -> as -> dps")
-println(catalog[1:20,:])
+# Load the design catalog
+# Currently using version FEB6_4"""
+catalog = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame); println(catalog[1:20,:])
 
 #load demands into a dictionary
 # demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
@@ -52,21 +47,19 @@ demand_path = joinpath(@__DIR__, "Demands/0205Full_scale_test_demands.json");
 open(demand_path, "r") do f
 	global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
 	ns = size(demands)[1]
-	demands[!,:idx] = 1:ns
+	demands[!,:idx] = 1:ns #add indices into the entry.
 	println("There are $ns points")
 	println("Demands were loads from:\n", demand_path)
 end
 println(demands[1:10,:])
 
-
-
-	println("Before Modifying the indices")
+#Modify the section and element indices (if needed)
+println("Before Modifying the indices")
 @show old_min_e_idx = minimum(demands[!, "e_idx"]);
 @show old_min_s_idx = minimum(demands[!, "s_idx"]);
-
+# ==================================================
 @show old_max_e_idx = maximum(demands[!, "e_idx"]);
 @show old_max_s_idx = maximum(demands[!, "s_idx"]);
-
 
 if old_min_e_idx == 0 
 	demands[!,"e_idx"] .+= 1 ;
@@ -86,20 +79,20 @@ println("After Modifying the Indices")
 
 @show new_max_e_idx = maximum(demands[!, "e_idx"]);
 @show new_max_s_idx = maximum(demands[!, "s_idx"]);
+
+#add colors to the types of sections ()
 types = unique(demands[!, :type])
-global color_mapping = Dict(types .=> 1:1:length(types))
+color_mapping = Dict(types .=> 1:1:length(types))
 	
 f_indices_check = Figure(size = (800,500))
 ax_indices_check = Axis(f_indices_check[1,1], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30)
 scatter!(ax_indices_check, demands[!, "idx"], demands[!, "e_idx"], color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check 
-
-	
+save(imagesavepath*"f_indices_check.png", f_indices_check)
 
 """
 Make the element indices unique
 """
-
 global e_idx = 1 
 for i in 1:size(demands)[1]
     if i !=1
@@ -114,53 +107,44 @@ for i in 1:size(demands)[1]
     end
 end
 
-
-
-f_indices_check_mod = Figure(size = (1600,500))
+f_indices_check_mod = Figure(size = (1500,1500), backgroundcolor = :white)
 ax_indices_check_mod = Axis(f_indices_check_mod[1,1], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30,
 title = "Modified element indices")
-
 ax_section_indices_check_mod = Axis(f_indices_check_mod[1,2], xlabel = "Global Index", ylabel = "Element Index", xticks = 0:20:250, yticks = 1:1:30,
 title = "Section indices")
-ax_dps = Axis(f_indices_check_mod[1,3], xlabel = "Global Index", ylabel = "dps", xticks = 0:20:250,
+ax_dps = Axis(f_indices_check_mod[2,:], xlabel = "Global Index", ylabel = "dps", xticks = 0:20:250,
 title = "Section indices")
 scatter!(ax_indices_check_mod, demands[!, "idx"], demands[!, "e_idx"],color = [color_mapping[t] for t in demands[!,:type]])
 scatter!(ax_section_indices_check_mod, demands[!, "idx"], demands[!, "s_idx"],color = [color_mapping[t] for t in demands[!,:type]])
 scatter!(ax_dps, demands[!, "idx"], demands[!, "ec_max"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
 f_indices_check_mod 
+save(imagesavepath*"f_indices_check_mod.png", f_indices_check_mod)
 
 """
 Visualize the demand points
 """
-
-f1 = Figure(size = (1000,1000))
+f1 = Figure(size = (1000,1000), backgroundcolor = :white)
 mu_max = 1.2*maximum(demands[!, :mu])
 vu_max = 1.2*maximum(demands[!, :vu])
 
-ax1 = Axis(f1[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", limits = (0,mu_max,0,300), title = "Demand vs Catalog Space",
-aspect = DataAspect()) 
-ax2 = Axis(f1[1,2], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title= "Catalog ONLY space")
+ax1 = Axis(f1[1,1:2], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", limits = (-10,nothing,-10,nothing), title = "Demand vs Catalog Space") 
+# ax2 = Axis(f1[1,2], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title= "Catalog ONLY space")
 	
-ax3 = Axis(f1[2,1], xlabel = "Shear [kN]" , limits = (0, vu_max, nothing, nothing), title = "Demands")
-ax4 = Axis(f1[2,2], xlabel = "Shear [kN]" , limits = (0, vu_max, nothing, nothing), title = "Catalog")
+ax3 = Axis(f1[2,1], xlabel = "Shear [kN]" , limits = (-10, vu_max, nothing, nothing), title = "Demands")
+ax4 = Axis(f1[2,2], xlabel = "Shear [kN]" , limits = (-10, vu_max, nothing, nothing), title = "Catalog")
 
 ax5 = Axis(f1[3,1], xlabel = "Moment [kNm]")
 ax6 = Axis(f1[3,2], xlabel = "Moment [kNm]")
 
 
-scatter!(ax1, demands[!, :mu], demands[!,:vu], color = [color_mapping[t] for t in demands[!,:type]], label = demands[!, :type])
-scatter!(ax1, catalog[!, :Mu], catalog[!, :Vu], colormap = :thermal , color = collect(catalog[!, :fc′]), marker = '.', alpha = 0.1, transparency = true, markersize = 5)
-
-scatter!(ax2, catalog[!, :Mu], catalog[!, :Vu], colormap = :thermal , color = collect(catalog[!, :fc′]), marker = '.', alpha = 0.5, transparency = true, markersize = 5)
-
-
+scatter!(ax1, demands[!, :mu], demands[!,:vu], colormap= :plasma, label = demands[!, :type], marker = 'x')
+scatter!(ax1, catalog[!, :Mu], catalog[!, :Vu] ,colormap= :plasma, markersize = 5)
+# scatter!(ax2, catalog[!, :Mu], catalog[!, :Vu] , color = collect(catalog[!, :fc′]), markersize = 5)
 
 hist!(ax3, demands[!, :vu], color = :red, bins = 20)
 hist!(ax4, catalog[!, :Vu], color = :blue, bins = 20)
-
 hist!(ax5, demands[!, :mu], color = :red, bins = 20)
 hist!(ax6, catalog[!, :Mu], color = :blue, bins = 20)
-	
 f1
 
 
@@ -224,11 +208,9 @@ end
 """
 	function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame)
 Find the optimum result for each element.
-    
+Design map from element number -> sections -> designs
     !! not optimum yet.
 Constraints for the same element.
-
-
 """
 function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame)
 	total_number_of_sections = size(demands)[1] #get total number of section points.
@@ -265,6 +247,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		println(size(feasible_idx)[1], " available sections")
 
         #catalog was already sorted, so I think we can leave this part, just filter, to save time.
+		
         mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, :dps])
 
         #now, loop each design in the sub catalog, see if "as" and "fpe" are available in all sections.
@@ -274,13 +257,13 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
         #select each design, check if as and fpe exist for the the section
         global final_d_idx = 0 
 		total_mid_catalog = size(mid_catalog)[1]
-		global found_all = true #make it a global variable.
+		global found_all = true
         for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
             d = mid_catalog[d_idx, :]
 			found_all = true
             # all_as  = true
             # all_fpe = true
-            serviceability_check = true
+            # serviceability_check = true
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
 				println("Check section $s")
                 #if not, go to the next choice.
@@ -311,7 +294,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 
 		#If the loop finishes without false, that's a hit! Otherwise, not found
 		if !found_all
-			println("Warning, can't find the solution for element $i")
+			println("!!!!!!!!!!!Warning, couldn't find the solution for element $i")
 			#output empty parameters (In this case 0)
 			elements_designs[i] = [0]
     		sections_to_designs[elements_to_sections] .= [0.]
@@ -338,13 +321,16 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
 	            this_catalog = filter([:fpe, :as] => fpe_as, catalog[feasible_idx, :])
 	
-	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon will be the first index.
+	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon then, dps will be the first index.
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
-	            sections_designs[is] = collect(catalog[select_ID, :])
-	        end
+				#add maxmimum and minimum dps for this part.
+				maximum_dps = maximum(this_catalog[!, :dps])
+				minimum_dps = minimum(this_catalog[!, :dps])
 
-			# Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
-	        # Create a pixelframeelement and/or section here with the given parameters 
+	            sections_designs[is] = vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
+	        end
+	  #       Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
+	  #       Create a pixelframeelement and/or section here with the given parameters 
 	  #       L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
 	  #       compoundsection =  make_Y_layup_section(L, t, Lc)
 	  #       pixelframeelement = PixelFrameElement() 
@@ -412,38 +398,36 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			# @show length(dis_history)
 	  #       δ = dis_history[end]
 	
-	        # elements_designs[i] = [sections_designs, δ, δ/(Le/240)]
+	  # elements_designs[i] = [sections_designs, δ, δ/(Le/240)]
 			elements_designs[i] = sections_designs #, δ, δ/(Le/240)]
-
-	
 	    end
-		
 	end
 	#at this point, we have all of the designs of the elements!!!
 		# println(typeof(sections_to_designs))
-	    for i in ne #loop each element
-			#i is an index of an element.
-	        @show sections = elements_to_sections[i] #sections numbers in that element.
-			#maximum sections 
-			# max_section = maximum(sections)
-			@show elements_designs[i]
-	        for design_idx in eachindex(sections)
-				# @show typeof(elements_designs[i])
-				# @show typeof(elements_designs[i][design_idx])
-				# println(elements_designs[i][design_idx])
+	for i in ne #loop each element
+		#i is an index of an element.
+		@show sections = elements_to_sections[i] #sections numbers in that element.
+		#maximum sections 
+		# max_section = maximum(sections)
+		@show elements_designs[i]
+		for design_idx in eachindex(sections)
+			# @show typeof(elements_designs[i])
+			# @show typeof(elements_designs[i][design_idx])
+			# println(elements_designs[i][design_idx])
 
-				# @show sections[design_idx]
-				# @show sections_to_designs[sections[design_idx]]
-	            sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
-	        end
-	    end
+			# @show sections[design_idx]
+			# @show sections_to_designs[sections[design_idx]]
+			sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
+		end
+	end
     return elements_designs, elements_to_sections, sections_to_designs
 end
 
-# ╔═╡ df8a7202-49c9-4e8a-81eb-aa63cc410888
-let
-global all_feasible_sections= filter_demands!(demands,catalog)
-end
+all_feasible_sections= filter_demands!(demands,catalog)
+
+design = find_optimum(all_feasible_sections, demands)
+#=============================================#
+
 
 #select a section to see the available designs
 section_number = 1
@@ -464,12 +448,12 @@ println(elements_designs)
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)
-open("src//Results//designs_results_23_02.json","w") do f
+open("src//Results//designs_results_05_03.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src//Results//sections_to_designs_23_02.json","w") do f
+open("src//Results//sections_to_designs_05_03.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
@@ -477,9 +461,9 @@ using Makie, GLMakie, CairoMakie
 using JSON
 using DataFrames, CSV
 
-designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_23_02.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
-mapping_strings = ["ID","fc′", "dosage", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id"]
-for i in 1:length(elements_designs)
+designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_05_03.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+mapping_strings = ["ID","fc′", "dosage", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id", "max_dps", "min_dps"]
+for i in eachindex(elements_designs)
 	for s in eachindex(elements_designs[i])
 		global_s_index = elements_to_sections[i][s]
 		println(global_s_index)
@@ -490,15 +474,15 @@ for i in 1:length(elements_designs)
 	end
 end 
 
-open("src/Results/23_02_designs_results_fielded.json","w") do f
+open("src/Results/05_03_designs_results_fielded.json","w") do f
     JSON.print(f, elements_designs_fielded)
 end
 
 ne = length(designs)
 println("There are $ne elements.")
 
-function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
-
+function plot_element(element_number::Int64, designs::Dict;
+	L::Float64 = 250.0)
 
 	sections = elements_to_sections[element_number]
 	element_number = string(element_number)
@@ -521,7 +505,15 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	@show res = mod(n+1,2)*250
 	@show x_range = -xmax+res:500:xmax-res
 	
-	
+	#create a bands (polygon of possible tendon profile)
+	tendon_points = Matrix{Int64}(undef, 2,2*n)
+	for i in 1:n 
+		tendon_points[:,i] = [500*(i-1)-xmax+res , -designs[element_number][i][17]]
+	end
+	for i in 1:n
+		tendon_points[:,i+n] = [500*(i-1)-xmax+res , -designs[element_number][i][18]]
+	end
+
 	
 	f1 = Figure(size = (1200,600))
 	g = f1[1,1] = GridLayout()
@@ -536,8 +528,10 @@ function plot_element(element_number::Int64, designs::Dict;L::Float64 = 250.0)
 	)
 	
 	poly!(Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
+	tendon = poly!(axs_design, tendon_points, color = :skyblue,alpha = 0.1, transparent = true)
+	tendon_pts = scatter!(axs_design, tendon_points)
 	tendon = lines!(axs_design, x_range, -tendon_profile)
-	
+
 	axs_axial  = Axis(g[2,1],aspect = 10,
 	limits = (-xmax, xmax, nothing, nothing),ylabel = "Axial [kN]", 
 	)
