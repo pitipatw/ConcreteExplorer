@@ -324,8 +324,13 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon then, dps will be the first index.
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
 				#add maxmimum and minimum dps for this part.
-				maximum_dps = maximum(this_catalog[!, :dps])
-				minimum_dps = minimum(this_catalog[!, :dps])
+				#filter again for all of the same configuration except dps.
+				this_fc′ = this_catalog[1,:fc′]
+				final_cut(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
+				constrained_catalog = filter([:fc′ ,:fpe, :as] => final_cut , catalog[feasible_idx, :])
+
+				maximum_dps = maximum(constrained_catalog[!, :dps])
+				minimum_dps = minimum(constrained_catalog[!, :dps])
 
 	            sections_designs[is] = vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
 	        end
@@ -487,7 +492,8 @@ function plot_element(element_number::Int64, designs::Dict;
 	sections = elements_to_sections[element_number]
 	element_number = string(element_number)
 	
-	L = 205
+	L = designs[element_number][1][12]
+	@show set_fc′ = [i[1] for i in designs[element_number]]
 	tendon_profile = [i[6] for i in designs[element_number]]
 	axial_capacity  = [i[8] for i in designs[element_number]]
 	moment_capacity = [i[9] for i in designs[element_number]]
@@ -511,36 +517,42 @@ function plot_element(element_number::Int64, designs::Dict;
 		tendon_points[:,i] = [500*(i-1)-xmax+res , -designs[element_number][i][17]]
 	end
 	for i in 1:n
-		tendon_points[:,i+n] = [500*(i-1)-xmax+res , -designs[element_number][i][18]]
+		tendon_points[:,2*n-i+1] = [500*(i-1)-xmax+res , -designs[element_number][i][18]]
 	end
 
-	
 	f1 = Figure(size = (1200,600))
 	g = f1[1,1] = GridLayout()
-	
 	axs_design = Axis(g[1,1],title = "Element $element_number", titlesize = 20,
 	aspect = DataAspect(),
-	limits = (-xmax-100, xmax+100, -1.3*L, 0.6*L),
-	yticks = L:-100:-L,
+	limits = (x_range[1]-100,x_range[end]+600, -2*L, 0.8*L),
+	yticks = div(L,100)*100:-100:-div(L,100)*105,
 	# yminorticks = IntervalsBetween(2),
 	# yminorgridvisible = true,
 	ylabel = "y"
 	)
 	
-	poly!(Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
+	for i in 1:n 
+		points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
+		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (40,80), colormap = :grays)
+	end
+	Colorbar(f1[1,2], ticks = [40,60,80], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))
+	#plot section based on concrete strength 
+	# concrete = poly!(axs_design,Rect( [-xmax+res, -L, (n-1)*500, L*1.5]...), color = (:grey,0.2))
+	# concrete = poly!(axs_design,Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
+
 	tendon = poly!(axs_design, tendon_points, color = :skyblue,alpha = 0.1, transparent = true)
 	tendon_pts = scatter!(axs_design, tendon_points)
 	tendon = lines!(axs_design, x_range, -tendon_profile)
 
 	axs_axial  = Axis(g[2,1],aspect = 10,
-	limits = (-xmax, xmax, nothing, nothing),ylabel = "Axial [kN]", 
+	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Axial [kN]", 
 	)
 	
 	axs_moment = Axis(g[3,1],aspect = 10,
-	limits = (-xmax, xmax, nothing, nothing),ylabel = "Moment [kNm]",
+	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Moment [kNm]",
 	)
 	axs_shear  = Axis(g[4,1],aspect = 10,
-	limits = (-xmax, xmax, nothing, nothing),ylabel = "Shear [kN]", 
+	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Shear [kN]", 
 	)
 	hidexdecorations!(axs_design, grid = false)
 	hidexdecorations!(axs_axial, grid = false)
@@ -562,13 +574,12 @@ function plot_element(element_number::Int64, designs::Dict;
 	
 	rowgap!(g, 10)
 	
-	@show yspace = maximum(tight_yticklabel_spacing!, [axs_axial, axs_shear, axs_moment])+10
+	yspace = maximum(tight_yticklabel_spacing!, [axs_axial, axs_shear, axs_moment])+10
 	
 	axs_axial.yticklabelspace = yspace
 	axs_moment.yticklabelspace = yspace
 	axs_shear.yticklabelspace = yspace
-	
-	f1
+
 	return f1
 end
 	

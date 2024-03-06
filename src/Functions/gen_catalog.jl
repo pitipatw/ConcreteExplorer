@@ -29,6 +29,7 @@ end
 """
 function get_catalog(case::String; 
     fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
+    println("Getting fc′ info from ", fc′_path)
     pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
     nps = size(pixel_sections)[1]
     println("Getting catalog with $nps section(s)")
@@ -69,7 +70,7 @@ function get_catalog(L, t, Lc;
 
         range_as = [(99.0 * 2),(140.0 * 2)] # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
         range_dps = vcat(0.0:20:350.0) 
-        range_fpe = (0.00:0.050:0.7) * 1860.0 #MPa
+        range_fpe = (0.00:0.050:0.5) * 1860.0 #MPa
         range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
     else
