@@ -66,7 +66,21 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     echo = false
     if dps == 0.0
         #work on the centroid.
-        return 0.0
+        #cut the section at centroid and find the maximum moment available from 
+        # fc′  = M / Sx. 
+        c_global = compoundsection.centroid[2]
+        #clip the seciton at depth Y (global)
+        # new_sections = Vector{SolidSection}()
+        # for sub_s in compoundsection.solids
+        #     sub_s_ymax = sub_s.ymax #global coordinate
+        #     sub_s_ymin = sub_s.ymin #global coordinate 
+        #     if sub_s_ymax - c_global > 0 #this means, c_global is below the top-most point of the subsection.
+        #         c_depth_local = clamp(sub_s_ymax - c_global, 0, sub_s_ymax - sub_s_ymin) #it can only go as far as the depth of the section.
+        #         push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
+        #     end
+        # end
+        mu = (fc′- fpe*as/compoundsection.area)*compoundsection.Sx
+        return mu
     end 
     #Pure Moment Capacity
     #concrete area
