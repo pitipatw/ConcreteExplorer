@@ -79,7 +79,8 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         #         push!(new_sections, sutherland_hodgman(sub_s, c_depth_local, return_section = true))
         #     end
         # end
-        mu = (fc′- fpe*as/compoundsection.area)*compoundsection.Sx
+        mn = (fc′- fpe*as/compoundsection.area)*compoundsection.Sx
+        mu = 0.65*mn #compression control section. 
         return mu
     end 
     #Pure Moment Capacity
