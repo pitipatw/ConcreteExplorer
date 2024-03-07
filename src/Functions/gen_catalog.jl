@@ -29,6 +29,7 @@ end
 """
 function get_catalog(case::String; 
     fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
+
     println("Getting fc′ info from ", fc′_path)
     pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
     nps = size(pixel_sections)[1]
@@ -49,7 +50,7 @@ test = false get a full catalog.
 """
 function get_catalog(L, t, Lc;
      case::String = "test", fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
-    if case == "test" #depreciated
+    if case == "test" #Depreciated
         #test
         println("Running test case")
         range_fc′ = 28.0
@@ -69,7 +70,9 @@ function get_catalog(L, t, Lc;
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
         range_as = [(99.0 * 2),(140.0 * 2)] # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
-        range_dps = vcat(0.0:20:350.0) 
+        range_dps_2 = [0.0]
+        range_dps_3 = vcat(0.0:20:350.0) 
+        range_dps_4 = [0.0]
         range_fpe = (0.00:0.050:0.5) * 1860.0 #MPa
         range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
@@ -81,7 +84,11 @@ function get_catalog(L, t, Lc;
     n = length.([range_fc′, range_as, range_dps, range_fpe, range_type])
     @show ntotal = prod(n)
     #Pre allocating results
-    results = Matrix{Float64}(undef, prod(n), 10 + 2 + 3) #L t Lc
+    n_result2 = prod(length.([range_fc′, range_as, range_dps_2, range_fpe, range_type]))
+    n_result3 = prod(length.([range_fc′, range_as, range_dps_3, range_fpe, range_type]))
+    n_result4 = prod(length.([range_fc′, range_as, range_dps_4, range_fpe, range_type]))
+    n_total = sum([n_result2, n_result3, n_result4])
+    results = Matrix{Float64}(undef, n_total, 10 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_type in eachindex(range_type)
@@ -90,6 +97,15 @@ function get_catalog(L, t, Lc;
                 for idx_ec in eachindex(range_dps)
                     for idx_fpe in eachindex(range_fpe)
                         T = range_type[idx_type]
+                        if T == 3 #Y layup 
+                            #Depth has to be changed.
+                        elseif T == 2.0 # X2 layup
+                            d
+                        elseif T == 4.0 # X4 layup
+                        else
+                            println("Warning, Type not supported")
+                        end
+
                         fc′ = range_fc′[idx_fc′]
                         fR1 = range_fR1[idx_fc′]
                         fR3 = range_fR3[idx_fc′]
