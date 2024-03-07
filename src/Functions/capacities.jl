@@ -259,21 +259,6 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
     L::Float64, dosage::Real;
     echo = false)
 
-    #Calculation starts here.
-    
-    # #Load the right sections (Using AsapSections here)
-    # if T == "Beam"
-    #     compoundsection = make_Y_layup_section(L, t, Lc)
-    # elseif T == "Column"
-    #     compoundsection = make_X2_layup_section(L, t, Lc)
-    #     #also have to do x4, but will see.
-    #     # section = make_X4_layup_section(L, t, Lc)
-    # else
-    #     println("Invalid type")
-    # end
-
-    # compoundsection = CompoundSection(sections)
-
     pu = get_Pu(compoundsection, fc′, as, fpe)
     mu = get_Mu(compoundsection, fc′, as, fpe, dps, L)
     vu = get_Vu(compoundsection, fc′, fR1, fR3, as, fpe, L,)

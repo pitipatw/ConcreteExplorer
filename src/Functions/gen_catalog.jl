@@ -70,24 +70,26 @@ function get_catalog(L, t, Lc;
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
         range_as = [(99.0 * 2),(140.0 * 2)] # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+
         range_dps_2 = [0.0]
         range_dps_3 = vcat(0.0:20:350.0) 
         range_dps_4 = [0.0]
+
         range_fpe = (0.00:0.050:0.5) * 1860.0 #MPa
-        range_type = [3.0, 2.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+        range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
     else
         println("Error Invalid test case")
         return nothing
     end
 
-    n = length.([range_fc′, range_as, range_dps, range_fpe, range_type])
-    @show ntotal = prod(n)
+    # n = length.([range_fc′, range_as, range_dps, range_fpe, range_type])
+    # @show ntotal = prod(n)
     #Pre allocating results
-    n_result2 = prod(length.([range_fc′, range_as, range_dps_2, range_fpe, range_type]))
-    n_result3 = prod(length.([range_fc′, range_as, range_dps_3, range_fpe, range_type]))
-    n_result4 = prod(length.([range_fc′, range_as, range_dps_4, range_fpe, range_type]))
-    n_total = sum([n_result2, n_result3, n_result4])
+    @show n_result2 = length.([range_dps_2,range_fc′, range_as,  range_fpe])
+    @show n_result3 = length.([range_dps_3,range_fc′, range_as,  range_fpe])
+    @show n_result4 = length.([range_dps_4,range_fc′, range_as,  range_fpe])
+    @show n_total = sum(prod.([n_result2, n_result3, n_result4]))
     results = Matrix{Float64}(undef, n_total, 10 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
@@ -96,15 +98,12 @@ function get_catalog(L, t, Lc;
         if T == 3 #Y layup 
             range_dps = range_dps_3
             compoundsection = make_Y_layup_section(L, t, Lc)
-
         elseif T == 2.0 # X2 layup
             range_dps = range_dps_2
             compoundsection = make_X2_layup_section(L, t, Lc)
-
         elseif T == 4.0 # X4 layup
             range_dps = range_dps_4
             compoundsection = make_X4_layup_section(L, t, Lc)
-
         else
             println("Warning, Type not supported")
         end
@@ -126,10 +125,23 @@ function get_catalog(L, t, Lc;
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
                         pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
-                        idx_all = [idx_fc′, idx_as, idx_dps, idx_fpe, idx_type]
-                        
-                        idx = mapping(n, idx_all)
-                        results[idx, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
+
+
+                        idx_all = [idx_dps, idx_fc′, idx_as, idx_fpe]
+
+                        if T == 2 
+                            sub_n = n_result2
+                            shift = 0
+                        elseif T == 3 
+                            sub_n = n_result3
+                            shift = prod(n_result2)
+                        elseif T == 4
+                            sub_n = n_result4
+                            shift = prod(n_result2) + prod(n_result3)
+                        end
+                        idx = mapping(sub_n, idx_all)
+                        @show idx, T
+                        results[idx + shift, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
                     end
                 end
             end
@@ -137,8 +149,8 @@ function get_catalog(L, t, Lc;
     end
 
     df = DataFrame(results, [:fc′, :dosage,:fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T])
-    df[!, :ID] = 1:ntotal
-    println("Got Catalog with $ntotal outputs")
+    df[!, :ID] = 1:n_total
+    println("Got Catalog with $n_total outputs")
     return df # results # DataFrame(results)
 end
 

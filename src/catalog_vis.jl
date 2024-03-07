@@ -3,8 +3,7 @@ using Makie, GLMakie, CairoMakie
 using CSV, DataFrames
 
 GLMakie.activate!()
-
-results = CSV.read("src/Catalogs/FEB27_1_catalog_static.csv", DataFrame);
+results = CSV.read("src/Catalogs/MAR07_1_catalog_alltypes.csv", DataFrame);
 # results = results[1:10,:]
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
