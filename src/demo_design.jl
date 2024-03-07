@@ -32,18 +32,18 @@ include("Functions/interpolations.jl");
 2. Turn everything into a gradient based optimization
 """
 
-filename ="MAR_05_01"
+filename ="MAR_07_03"
 imagesavepath = "src//Images//Demo//"
 println("File version $filename")
 
 
 # Load the design catalog
 # Currently using version FEB6_4"""
-catalog = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame); println(catalog[1:20,:])
+catalog = CSV.read("src/Catalogs/MAR07_1_catalog_alltypes.csv", DataFrame); println(catalog[1:20,:])
 
 #load demands into a dictionary
 # demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
-demand_path = joinpath(@__DIR__, "Demands/0205Full_scale_test_demands.json");
+demand_path = joinpath(@__DIR__, "Demands/0306_test building_occupancy.json");
 open(demand_path, "r") do f
 	global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
 	ns = size(demands)[1]
@@ -51,7 +51,7 @@ open(demand_path, "r") do f
 	println("There are $ns points")
 	println("Demands were loads from:\n", demand_path)
 end
-println(demands[1:10,:])
+ println(demands[1:10,:])
 
 #Modify the section and element indices (if needed)
 println("Before Modifying the indices")
@@ -100,7 +100,6 @@ for i in 1:size(demands)[1]
         if demands[i,:s_idx] < demands[i-1,:s_idx]
             global e_idx +=1 
         end
-        
     end
     if i == size(demands)[1]
         demands[i, :e_idx] = e_idx
@@ -179,12 +178,22 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
         mu = demands[i, "mu"]
         vu = demands[i, "vu"]
         ec_max = demands[i, "ec_max"]
+		T_string = demands[i, "type"]
+		if T_string == "primary" || T_string == "secondary"
+			T = 3	
+		elseif T_string == "columns"
+			T = 2
+		else 
+			println("Warning, invalid type")
 
-        global feasible_sections = filter([:Pu, :Mu, :Vu, :dps] => (x1, x2, x3, x4) ->
+		end
+
+        global feasible_sections = filter([:Pu, :Mu, :Vu, :dps, :T] => (x1, x2, x3, x4, x5) ->
                 x1 >= pu &&
                 x2 >= mu &&
                 x3 >= vu &&
-                x4 <= ec_max * 1000,
+                x4 <= ec_max * 1000 &&
+				mod(x5,T) == 0,
             catalog
         )
 		# @show minimum(feasible_sections[:, :Mu])
@@ -277,8 +286,9 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
                 # end
 				check_as =  d[:as] ∈ catalog[all_feasible_sections[s], :as]
 				check_fpe = d[:fpe] ∈ catalog[all_feasible_sections[s], :fpe]
-				
-				if !check_as || !check_fpe #not found, move to the next design of the mid section.
+				check_type = d[:T] ∈ catalog[all_feasible_sections[s], :T]
+
+				if !check_as || !check_fpe || !check_type #not found, move to the next design of the mid section.
                     found_all = false
 					println("Section $s fails, restarting...")
                     break
@@ -307,6 +317,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			println("final_d_idx is $final_d_idx")
 	        this_fpe = mid_catalog[final_d_idx, :fpe] 
 	        this_as = mid_catalog[final_d_idx, :as]
+			this_type = mid_catalog[final_d_idx, :T]
 	
 	        sections_designs = Vector{Vector}(undef, ns)
 	        for is in eachindex(elements_to_sections[i])
@@ -316,10 +327,12 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            feasible_idx = all_feasible_sections[s] # all feasible sections for this section.
 				# println("Feasible Catalog")
 	            # fc′_fpe_as(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
-	            fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
+	            # fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
+				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+
 	
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
-	            this_catalog = filter([:fpe, :as] => fpe_as, catalog[feasible_idx, :])
+	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
 	
 	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon then, dps will be the first index.
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
@@ -411,10 +424,10 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		# println(typeof(sections_to_designs))
 	for i in ne #loop each element
 		#i is an index of an element.
-		@show sections = elements_to_sections[i] #sections numbers in that element.
+		sections = elements_to_sections[i] #sections numbers in that element.
 		#maximum sections 
 		# max_section = maximum(sections)
-		@show elements_designs[i]
+		elements_designs[i]
 		for design_idx in eachindex(sections)
 			# @show typeof(elements_designs[i])
 			# @show typeof(elements_designs[i][design_idx])
@@ -430,7 +443,7 @@ end
 
 all_feasible_sections= filter_demands!(demands,catalog)
 
-design = find_optimum(all_feasible_sections, demands)
+design = find_optimum(all_feasible_sections, demands);
 #=============================================#
 
 
@@ -453,12 +466,12 @@ println(elements_designs)
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)
-open("src//Results//designs_results_05_03.json","w") do f
+open("src//Results//designs_results_07_03.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src//Results//sections_to_designs_05_03.json","w") do f
+open("src//Results//sections_to_designs_07_03.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
@@ -466,7 +479,7 @@ using Makie, GLMakie, CairoMakie
 using JSON
 using DataFrames, CSV
 
-designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_05_03.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_07_03.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
 mapping_strings = ["ID","fc′", "dosage", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id", "max_dps", "min_dps"]
 for i in eachindex(elements_designs)
 	for s in eachindex(elements_designs[i])
@@ -479,7 +492,7 @@ for i in eachindex(elements_designs)
 	end
 end 
 
-open("src/Results/05_03_designs_results_fielded.json","w") do f
+open("src/Results/07_03_designs_results_fielded.json","w") do f
     JSON.print(f, elements_designs_fielded)
 end
 
@@ -532,7 +545,7 @@ function plot_element(element_number::Int64, designs::Dict;
 	)
 	
 	for i in 1:n 
-		points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
+		@show points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
 		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (40,80), colormap = :grays)
 	end
 	Colorbar(f1[1,2], ticks = [40,60,80], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))

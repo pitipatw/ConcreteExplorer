@@ -140,7 +140,7 @@ function get_catalog(L, t, Lc;
                             shift = prod(n_result2) + prod(n_result3)
                         end
                         idx = mapping(sub_n, idx_all)
-                        @show idx, T
+                        # @show idx, T
                         results[idx + shift, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
                     end
                 end
