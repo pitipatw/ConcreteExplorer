@@ -95,10 +95,16 @@ function get_catalog(L, t, Lc;
         T = range_type[idx_type]
         if T == 3 #Y layup 
             range_dps = range_dps_3
+            compoundsection = make_Y_layup_section(L, t, Lc)
+
         elseif T == 2.0 # X2 layup
             range_dps = range_dps_2
+            compoundsection = make_X2_layup_section(L, t, Lc)
+
         elseif T == 4.0 # X4 layup
             range_dps = range_dps_4
+            compoundsection = make_X4_layup_section(L, t, Lc)
+
         else
             println("Warning, Type not supported")
         end
@@ -117,17 +123,6 @@ function get_catalog(L, t, Lc;
                         fpe = range_fpe[idx_fpe]
                         #to do
                         #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
-                        #by type
-                        if T == 3.0
-                            compoundsection = make_Y_layup_section(L, t, Lc)
-                        elseif T == 2.0
-                            compoundsection = make_X2_layup_section(L, t, Lc)
-                            #also have to do x4, but will see.
-                        elseif T == 4.0
-                            compoundsection = make_X4_layup_section(L, t, Lc)
-                        else 
-                            println("Invalid Type")
-                        end
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
                         pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
