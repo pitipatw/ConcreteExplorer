@@ -92,19 +92,20 @@ function get_catalog(L, t, Lc;
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_type in eachindex(range_type)
-        for idx_fc′ in eachindex(range_fc′)
-            for idx_as in eachindex(range_as)
-                for idx_ec in eachindex(range_dps)
+        T = range_type[idx_type]
+        if T == 3 #Y layup 
+            range_dps = range_dps_3
+        elseif T == 2.0 # X2 layup
+            range_dps = range_dps_2
+        elseif T == 4.0 # X4 layup
+            range_dps = range_dps_4
+        else
+            println("Warning, Type not supported")
+        end
+        for idx_dps in eachindex(range_dps)
+            for idx_fc′ in eachindex(range_fc′)
+                for idx_as in eachindex(range_as)
                     for idx_fpe in eachindex(range_fpe)
-                        T = range_type[idx_type]
-                        if T == 3 #Y layup 
-                            #Depth has to be changed.
-                        elseif T == 2.0 # X2 layup
-                            d
-                        elseif T == 4.0 # X4 layup
-                        else
-                            println("Warning, Type not supported")
-                        end
 
                         fc′ = range_fc′[idx_fc′]
                         fR1 = range_fR1[idx_fc′]
@@ -112,7 +113,7 @@ function get_catalog(L, t, Lc;
                         dosage = range_dosage[idx_fc′]
 
                         as = range_as[idx_as]
-                        dps = range_dps[idx_ec]
+                        dps = range_dps[idx_dps]
                         fpe = range_fpe[idx_fpe]
                         #to do
                         #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
@@ -130,8 +131,8 @@ function get_catalog(L, t, Lc;
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
                         pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
-                        idx_all = [idx_fc′, idx_as, idx_ec, idx_fpe, idx_type]
-
+                        idx_all = [idx_fc′, idx_as, idx_dps, idx_fpe, idx_type]
+                        
                         idx = mapping(n, idx_all)
                         results[idx, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
                     end
