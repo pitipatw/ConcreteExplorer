@@ -3,7 +3,7 @@ using Makie, GLMakie, CairoMakie
 using CSV, DataFrames
 
 GLMakie.activate!()
-results = CSV.read("src/Catalogs/MAR07_1_catalog_alltypes.csv", DataFrame);
+results = CSV.read("src/Catalogs/MAR08_1_catalog_alltypes.csv", DataFrame);
 # results = results[1:10,:]
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
@@ -114,6 +114,5 @@ end
 #     #plot zeros as black on top (that's why it is separated and plotted later.)
 #     scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
 # end
-
 
 f_catalog

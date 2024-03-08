@@ -32,18 +32,18 @@ include("Functions/interpolations.jl");
 2. Turn everything into a gradient based optimization
 """
 
-filename ="MAR_07_03"
-imagesavepath = "src//Images//Demo//"
+filename ="MAR_08_01"
+imagesavepath = "src//Images//Demo//"*filename*"_"
 println("File version $filename")
 
 
 # Load the design catalog
 # Currently using version FEB6_4"""
-catalog = CSV.read("src/Catalogs/MAR07_1_catalog_alltypes.csv", DataFrame); println(catalog[1:20,:])
+catalog = CSV.read("src/Catalogs/MAR08_1_catalog_alltypes.csv", DataFrame); println(catalog[1:20,:])
 
 #load demands into a dictionary
 # demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
-demand_path = joinpath(@__DIR__, "Demands/0306_test building_occupancy.json");
+demand_path = joinpath(@__DIR__, "Demands/0308_test_building_2_occupancy.json");
 open(demand_path, "r") do f
 	global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
 	ns = size(demands)[1]
@@ -275,20 +275,27 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
             # serviceability_check = true
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
 				println("Check section $s")
-                #if not, go to the next choice.
-
-                #If matching fc′, make sure that the fR1 and fR3 are also matched.
-
-                # if !(d[:fc′] ∈ catalog[all_feasible_sections[s], :fc′])
-				#also check the fR1 and fR3
-                #     all_fc′ = false
-                #     break
                 # end
-				check_as =  d[:as] ∈ catalog[all_feasible_sections[s], :as]
-				check_fpe = d[:fpe] ∈ catalog[all_feasible_sections[s], :fpe]
-				check_type = d[:T] ∈ catalog[all_feasible_sections[s], :T]
+				this_fpe = d[:fpe]
+				this_as = d[:as]
+				this_type = d[:T]
 
-				if !check_as || !check_fpe || !check_type #not found, move to the next design of the mid section.
+				#this is too weak
+				# check_as =  this_as ∈ catalog[all_feasible_sections[s], :as]
+				# check_fpe = this_fpe ∈ catalog[all_feasible_sections[s], :fpe]
+				# check_type = this_type ∈ catalog[all_feasible_sections[s], :T]
+
+				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
+	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[all_feasible_sections[s], :])
+				# if size(this_catalog)[1] == 0 
+				# 	@show this_catalog
+				# end
+
+
+
+				# if !check_as || !check_fpe || !check_type #not found, move to the next design of the mid section.
+				if size(this_catalog)[1] == 0
                     found_all = false
 					println("Section $s fails, restarting...")
                     break
@@ -309,6 +316,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			elements_designs[i] = [0]
     		sections_to_designs[elements_to_sections] .= [0.]
 		else
+			println("###")
 			println("making element $i")
 	        #get the first one, they will appear in the entire thing anyway.
 	        # this_fc′ = mid_catalog[global_d, :fc′]
@@ -330,15 +338,20 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            # fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
 				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
 
-	
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
 	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
-	
-	            sort!(this_catalog, [:carbon, :dps]) #the lowest carbon then, dps will be the first index.
+				if size(this_catalog)[1] == 0 
+					@show this_catalog
+				end
+
+	            # @show sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
+				sort!(this_catalog, [:carbon,:dps] )
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
 				#add maxmimum and minimum dps for this part.
 				#filter again for all of the same configuration except dps.
 				this_fc′ = this_catalog[1,:fc′]
+
+				#do this so the sections in the band are still the same, but different dps.
 				final_cut(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
 				constrained_catalog = filter([:fc′ ,:fpe, :as] => final_cut , catalog[feasible_idx, :])
 
@@ -466,12 +479,12 @@ println(elements_designs)
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)
-open("src//Results//designs_results_07_03.json","w") do f
+open("src//Results//designs_results_08_03.json","w") do f
     JSON.print(f, elements_designs)
 end
 
 
-open("src//Results//sections_to_designs_07_03.json","w") do f
+open("src//Results//sections_to_designs_08_03.json","w") do f
     JSON.print(f, sections_to_designs)
 end
 
@@ -479,7 +492,7 @@ using Makie, GLMakie, CairoMakie
 using JSON
 using DataFrames, CSV
 
-designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_07_03.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
+designs = JSON.parsefile(joinpath(@__DIR__,"Results//designs_results_08_03.json"), dicttype = Dict{String,Vector{Vector{Float64}}});
 mapping_strings = ["ID","fc′", "dosage", "fR1", "fR3", "as" ,"dps", "fpe", "Pu" ,"Mu", "Vu,", "carbon", "L", "t", "Lc","T", "catalog_id", "max_dps", "min_dps"]
 for i in eachindex(elements_designs)
 	for s in eachindex(elements_designs[i])
@@ -492,7 +505,7 @@ for i in eachindex(elements_designs)
 	end
 end 
 
-open("src/Results/07_03_designs_results_fielded.json","w") do f
+open("src/Results/08_03_designs_results_fielded.json","w") do f
     JSON.print(f, elements_designs_fielded)
 end
 
@@ -527,10 +540,10 @@ function plot_element(element_number::Int64, designs::Dict;
 	#create a bands (polygon of possible tendon profile)
 	tendon_points = Matrix{Int64}(undef, 2,2*n)
 	for i in 1:n 
-		tendon_points[:,i] = [500*(i-1)-xmax+res , -designs[element_number][i][17]]
+		tendon_points[:,i] = [500*(i-1)-xmax+res+250 , -designs[element_number][i][17]]
 	end
 	for i in 1:n
-		tendon_points[:,2*n-i+1] = [500*(i-1)-xmax+res , -designs[element_number][i][18]]
+		tendon_points[:,2*n-i+1] = [500*(i-1)-xmax+res+250 , -designs[element_number][i][18]]
 	end
 
 	f1 = Figure(size = (1200,600))
@@ -546,16 +559,16 @@ function plot_element(element_number::Int64, designs::Dict;
 	
 	for i in 1:n 
 		@show points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
-		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (40,80), colormap = :grays)
+		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (20,100), colormap = :grays)
 	end
-	Colorbar(f1[1,2], ticks = [40,60,80], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))
+	Colorbar(f1[1,2], ticks = [20,30,40,50,60,70,80,90,100], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))
 	#plot section based on concrete strength 
 	# concrete = poly!(axs_design,Rect( [-xmax+res, -L, (n-1)*500, L*1.5]...), color = (:grey,0.2))
 	# concrete = poly!(axs_design,Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
 
 	tendon = poly!(axs_design, tendon_points, color = :skyblue,alpha = 0.1, transparent = true)
 	tendon_pts = scatter!(axs_design, tendon_points)
-	tendon = lines!(axs_design, x_range, -tendon_profile)
+	tendon = lines!(axs_design, x_range.+250, -tendon_profile)
 
 	axs_axial  = Axis(g[2,1],aspect = 10,
 	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Axial [kN]", 
@@ -646,7 +659,7 @@ for i in 1:length(unique_stack_name)
 end
 
 csv_output = DataFrame(:fc′=> csv_fc′, :dosage=> csv_dosage, :fR1=> csv_fR1, :fR3=>csv_fR3)
-CSV.write(joinpath(@__DIR__, "mix_specs.csv"), csv_output)
+CSV.write(joinpath(@__DIR__, "08_03_mix_specs.csv"), csv_output)
 
 
 
