@@ -164,7 +164,6 @@ f1
 save(imagesavepath*"f_demand_catalog_distribution.png", f1)
 
 
-
 """
 Define 2 functions
 1. filter_demands(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Vector{Int64}}
@@ -241,11 +240,14 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	total_number_of_sections = size(demands)[1] #get total number of section points.
     ne = unique(demands[!, :e_idx]) #list of element index
 	
-	#Outputs
+	# Pre allocate outputs
 	elements_to_sections = Dict(k => Int[] for k in ne) #Map element indices to indices of sections on those elements.
-    elements_designs = Dict(k => [[]] for k in unique(demands[!, :e_idx]))  #element index to list of designs
+    elements_designs = Dict(k => Dict() for k in unique(demands[!, :e_idx]))  #element index to list of designs
     sections_to_designs = Dict(k => Vector{Float64}() for k in demands[!, :idx]) #each section to its design
+	sections_to_designs = Dict(k => Dict() for k in demands[!, :idx]) 
 
+	catalog_keys::Vector{Symbol} = [:fc′, :dosage, :fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T, :ID];
+	
 	for i in 1:total_number_of_sections
 		e = demands[i, :e_idx] 
 		push!(elements_to_sections[e], demands[i, :idx])
@@ -272,47 +274,35 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		println(size(feasible_idx)[1], " available sections")
 
         #catalog was already sorted, so I think we can leave this part, just filter, to save time.
-		
-        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, :dps])
+        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, order(:dps, rev = true)])
 
         #now, loop each design in the sub catalog, see if "as" and "fpe" are available in all sections.
         #if not, remove that design from the sub catalog.
         #if yes, keep it.
 
         #select each design, check if as and fpe exist for the the section
-        global final_d_idx = 0 
 		total_mid_catalog = size(mid_catalog)[1]
-		global found_all = true
+		final_design_index = 0 
         for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
-            d = mid_catalog[d_idx, :]
+            current_mid_design = mid_catalog[d_idx, :]
+			this_fpe  = current_mid_design[:fpe]
+			this_as   = current_mid_design[:as]
+			this_type = current_mid_design[:T]
+			fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+
 			found_all = true
-            # all_as  = true
-            # all_fpe = true
             # serviceability_check = true
+
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
 				println("Check section $s")
-                # end
-				this_fpe = d[:fpe]
-				this_as = d[:as]
-				this_type = d[:T]
+				feasible_sections = all_feasible_sections[s]
+				section_feasible_catalog = catalog[feasible_sections,:]
+      
+				#a check function, ensures that these parameters happen at the same time.
+	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
 
-				#this is too weak
-				# check_as =  this_as ∈ catalog[all_feasible_sections[s], :as]
-				# check_fpe = this_fpe ∈ catalog[all_feasible_sections[s], :fpe]
-				# check_type = this_type ∈ catalog[all_feasible_sections[s], :T]
-
-				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
-	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
-	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[all_feasible_sections[s], :])
-				# if size(this_catalog)[1] == 0 
-				# 	@show this_catalog
-				# end
-
-
-
-				# if !check_as || !check_fpe || !check_type #not found, move to the next design of the mid section.
 				if size(this_catalog)[1] == 0
-                    found_all = false
+                    found_all = false #if this happens at the last possible mid section, the found_all would trigger the next part.
 					println("Section $s fails, restarting...")
                     break
                 end
@@ -320,7 +310,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 
 			if found_all
 				println("Found all at element $i")
-				final_d_idx = d_idx
+				final_design_index = d_idx
 				break
 			end
         end
@@ -330,20 +320,17 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			println("!!!!!!!!!!!Warning, couldn't find the solution for element $i")
 			#output empty parameters (In this case 0)
 			elements_designs[i] = [0]
-    		sections_to_designs[elements_to_sections] .= [0.]
+    		sections_to_designs[elements_to_sections][catalog_keys] .= [0.]
 		else
 			println("###")
 			println("making element $i")
-	        #get the first one, they will appear in the entire thing anyway.
-	        # this_fc′ = mid_catalog[global_d, :fc′]
-			# this_fR1 = mid_catalog[global_d, :fR1]
-			# this_fR3 = mid_catalog[global_d, :fR3]
-			println("final_d_idx is $final_d_idx")
-	        this_fpe = mid_catalog[final_d_idx, :fpe] 
-	        this_as = mid_catalog[final_d_idx, :as]
-			this_type = mid_catalog[final_d_idx, :T]
-	
-	        sections_designs = Vector{Vector}(undef, ns)
+			println("final_design_index is $final_design_index")
+	        this_fpe  = mid_catalog[final_design_index, :fpe] 
+	        this_as   = mid_catalog[final_design_index, :as]
+			this_type = mid_catalog[final_design_index, :T]
+
+	        # sections_designs = Vector{Vector}(undef, ns)
+			sections_designs = Dict{Int64,  Dict{Symbol,Union{Float64,Int64,String}}}(k =>Dict() for k in 1:ns) 
 	        for is in eachindex(elements_to_sections[i])
 	            #current section index
 	            s = elements_to_sections[i][is]
@@ -374,7 +361,8 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				maximum_dps = maximum(constrained_catalog[!, :dps])
 				minimum_dps = minimum(constrained_catalog[!, :dps])
 
-	            sections_designs[is] = vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
+				@show vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
+	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps]))
 	        end
 	  #       Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
 	  #       Create a pixelframeelement and/or section here with the given parameters 
@@ -464,6 +452,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 
 			# @show sections[design_idx]
 			# @show sections_to_designs[sections[design_idx]]
+			@show elements_designs[i][design_idx]
 			sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
 		end
 	end
@@ -472,17 +461,18 @@ end
 
 all_feasible_sections= filter_demands!(demands,catalog)
 
-design = find_optimum(all_feasible_sections, demands);
 #=============================================#
-
 
 #select a section to see the available designs
 section_number = 1
 figure_check_section = Figure(size = (500,500))
 ax_section = Axis(figure_check_section[1,1], xlabel = "Moment [kNm]", ylabel = "Shear [kN]", title = string(section_number))
-for d in 1:length(all_feasible_sections[section_number])
-	scatter!(ax_section, catalog[d,:Mu], catalog[d,:Vu])
+for current_mid_design in 1:length(all_feasible_sections[section_number])
+	scatter!(ax_section, catalog[current_mid_design,:Mu], catalog[current_mid_design,:Vu], color = catalog[current_mid_design, :fc′], colorrange = extrema(catalog[!, :fc′]))
 end
+
+figure_check_section
+
 
 for i in 1:length(all_feasible_sections)
 	println("Section $i")
