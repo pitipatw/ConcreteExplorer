@@ -225,11 +225,11 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     fctk = 0.17*sqrt(fc′)
     ρs = as / ashear
     k = clamp(sqrt(200.0 / d), 0, 2.0)
-    fFts = 0.45 * fR1
-    wu = 1.5
-    CMOD3 = 1.5
-    fFtuk = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
-
+    # fFts = 0.45 * fR1
+    # wu = 1.5
+    # CMOD3 = 1.5
+    # fFtuk = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
+    fFtuk = fR3/3
     ptforce = fpe*as #get_Pu(compoundsection, fc′, as, fpe)
     ned = 1000*ptforce# N
     σcp1 = ned / ac
