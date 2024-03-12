@@ -1,6 +1,6 @@
 using Makie, GLMakie
 using CSV, DataFrames
-using Formatting
+using Format
 using Statistics
 
 save_file = true;
@@ -17,7 +17,7 @@ fc′_Broyles_psi = dataset_Broyles[!, fc′_column_name    ]
 ec_Broyles = dataset_Broyles[!, ec_column_name]
 
 #number formatting for clean visualization
-printx(x,N) = sprintf1("%10.$(N)f",x)
+printx(x,N) =  format("%10.$(N)f",x)
 
 f1 = Figure(size = (800,800))
 ax1 = Axis(f1[1,1],

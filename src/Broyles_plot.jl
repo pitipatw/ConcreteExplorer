@@ -1,11 +1,12 @@
-include("beamcalc.jl")
+# include("beamcalc.jl")
 
 using CSV, DataFrames
+using Makie, GLMakie
 #loop through dataset.
 
-dataset_Broyles = CSV.read("src/Compiled Concrete EPD Data Revised 11_06_2023.csv", DataFrame)
+dataset_Broyles = CSV.read("src//Tables//Compiled Concrete EPD Data Revised 11_06_2023.csv", DataFrame)
 #remove one with too high Embodied Carbon (mroe than 2000)
-ec_Broyles = dataset_jon[!, "A1-A3 Global Warming Potential (kg CO2-eq)"]
+ec_Broyles = dataset_Broyles[!, "A1-A3 Global Warming Potential (kg CO2-eq)"]
 
 filter = ec_Broyles .> 800
 deleteat!(dataset_Broyles, filter)
