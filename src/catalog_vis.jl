@@ -3,11 +3,7 @@ using Makie, GLMakie, CairoMakie
 using CSV, DataFrames
 
 GLMakie.activate!()
-
-
-
-
-results = CSV.read("src/Catalogs/FEB23_3_catalog_static.csv", DataFrame);
+results = CSV.read("src/Catalogs/MAR08_1_catalog_alltypes.csv", DataFrame);
 # results = results[1:10,:]
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
@@ -15,11 +11,7 @@ x_label = "fc′ [MPa]"
 x_min = minimum(results[!, x_axis])
 x_max = maximum(results[!, x_axis])
 
-
-
 f_catalog = Figure(size=(3000, 2000))
-
-
 
 titles = ["fc′", "as", "dps", "fpe", "dosage", "carbon", "L", "t", "Lc", "T", "Pu", "Mu", "Vu"]
 units = ["MPa", "mm2", "mm", "MPa", "kg steel/m3 concrete", "kgCO2e/m", "mm", "mm", "mm", "-", "kN", "kNm", "kN"]
@@ -122,6 +114,5 @@ end
 #     #plot zeros as black on top (that's why it is separated and plotted later.)
 #     scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
 # end
-
 
 f_catalog

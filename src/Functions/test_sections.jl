@@ -16,3 +16,4 @@ lines!(ax1, c1.solids[2].points)
 s1.area
 s2.area
 c1.area
+
