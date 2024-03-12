@@ -47,7 +47,9 @@ function get_Pu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
      ccn = 0.85 * fc′ * ac
      #*need a justification on 0.003 Eps
      # pn = (ccn - (fpe - 0.003 * Eps) * as) / 1000 # convert to [kN]
-     pn = (ccn - (fpe-0.003*Ep)* as)
+    #  pn = (ccn - (fpe-0.003*Ep)* as)
+     #Conservative**, pn will only rely on concrete, not the tendons.
+     pn = ccn
      pu = 0.65 * 0.8 * pn /1000 #[kN]
      
      return pu
@@ -226,12 +228,14 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     fFts = 0.45 * fR1
     wu = 1.5
     CMOD3 = 1.5
+    fFtuk = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
+
     ptforce = fpe*as #get_Pu(compoundsection, fc′, as, fpe)
     ned = 1000*ptforce# N
     σcp1 = ned / ac
     σcp2 = 0.2 * fc′
     σcp = clamp(σcp1, 0.0, σcp2)
-    fFtuk = fFts - wu / CMOD3 * (fFts - 0.5 * fR3 + 0.2 * fR1)
+ 
 
     #fib notation 
     fck = fc′
@@ -239,9 +243,10 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     #constant 
     γc = 1.0
 
-    vn = ashear * (0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * σcp)
+    #Fib 2010 gives V design which is Vu. Therefore, no reduction factor of 0.75 is needed.
+    vu = ashear * (0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * σcp)
     
-    vu = 0.75 * vn/1000 # kN
+    # vu = 0.75 * vn/1000 # kN
  return vu
 
 end
