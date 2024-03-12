@@ -32,10 +32,10 @@ include("Functions/interpolations.jl");
 2. Turn everything into a gradient based optimization
 """
 
-filename ="MAR_08_01"
-imagesavepath = "src//Images//Demo//"*filename*"_"
-println("File version $filename")
-
+date ="12_03";
+version = "01";
+imagesavepath = "src//Images//Demo//"*date*"_";
+println("Date: $date \nFile version $version")
 
 # Load the design catalog
 # Currently using version FEB6_4"""
@@ -113,9 +113,25 @@ ax_section_indices_check_mod = Axis(f_indices_check_mod[1,2], xlabel = "Global I
 title = "Section indices")
 ax_dps = Axis(f_indices_check_mod[2,:], xlabel = "Global Index", ylabel = "dps", xticks = 0:20:250,
 title = "Section indices")
+
+ax_m = Axis(f_indices_check_mod[3,:], xlabel = "Global Index", ylabel = "Moment", xticks = 0:20:250,
+title = "Section indices")
+ax_p = Axis(f_indices_check_mod[4,:], xlabel = "Global Index", ylabel = "Axial", xticks = 0:20:250,
+title = "Section indices")
+ax_v = Axis(f_indices_check_mod[5,:], xlabel = "Global Index", ylabel = "Shear", xticks = 0:20:250,
+title = "Section indices")
+
+
+
 scatter!(ax_indices_check_mod, demands[!, "idx"], demands[!, "e_idx"],color = [color_mapping[t] for t in demands[!,:type]])
 scatter!(ax_section_indices_check_mod, demands[!, "idx"], demands[!, "s_idx"],color = [color_mapping[t] for t in demands[!,:type]])
 scatter!(ax_dps, demands[!, "idx"], demands[!, "ec_max"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
+scatter!(ax_m, demands[!, "idx"], demands[!, "mu"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
+scatter!(ax_p, demands[!, "idx"], demands[!, "pu"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
+scatter!(ax_v, demands[!, "idx"], demands[!, "vu"].*1000,color = [color_mapping[t] for t in demands[!,:type]])
+
+
+
 f_indices_check_mod 
 save(imagesavepath*"f_indices_check_mod.png", f_indices_check_mod)
 
@@ -145,6 +161,7 @@ hist!(ax4, catalog[!, :Vu], color = :blue, bins = 20)
 hist!(ax5, demands[!, :mu], color = :red, bins = 20)
 hist!(ax6, catalog[!, :Mu], color = :blue, bins = 20)
 f1
+save(imagesavepath*"f_demand_catalog_distribution.png", f1)
 
 
 
@@ -185,7 +202,6 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
 			T = 2
 		else 
 			println("Warning, invalid type")
-
 		end
 
         global feasible_sections = filter([:Pu, :Mu, :Vu, :dps, :T] => (x1, x2, x3, x4, x5) ->
@@ -505,7 +521,7 @@ for i in eachindex(elements_designs)
 	end
 end 
 
-open("src/Results/08_03_designs_results_fielded.json","w") do f
+open("src/Results/12_03_designs_results_fielded.json","w") do f
     JSON.print(f, elements_designs_fielded)
 end
 
@@ -533,17 +549,21 @@ function plot_element(element_number::Int64, designs::Dict;
 	
 	#plot center around x = 0 
 	@show n = length(tendon_profile)
+	@show length(axial_demand)
+	@show res = mod(n,2)*250
 	xmax = div(n,2)*500
-	@show res = mod(n+1,2)*250
-	@show x_range = -xmax+res:500:xmax-res
+	x_1 = -xmax + 250-res
+	x_n = xmax -250-res
+	# @show x_range = (-xmax+res:500:xmax-res)
+	@show x_range = x_1:500:x_n
 	
 	#create a bands (polygon of possible tendon profile)
 	tendon_points = Matrix{Int64}(undef, 2,2*n)
 	for i in 1:n 
-		tendon_points[:,i] = [500*(i-1)-xmax+res+250 , -designs[element_number][i][17]]
+		tendon_points[:,i] = [500*(i-1)-xmax , -designs[element_number][i][17]]
 	end
 	for i in 1:n
-		tendon_points[:,2*n-i+1] = [500*(i-1)-xmax+res+250 , -designs[element_number][i][18]]
+		tendon_points[:,2*n-i+1] = [500*(i-1)-xmax , -designs[element_number][i][18]]
 	end
 
 	f1 = Figure(size = (1200,600))
@@ -558,7 +578,7 @@ function plot_element(element_number::Int64, designs::Dict;
 	)
 	
 	for i in 1:n 
-		@show points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
+		points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
 		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (20,100), colormap = :grays)
 	end
 	Colorbar(f1[1,2], ticks = [20,30,40,50,60,70,80,90,100], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))
@@ -568,17 +588,17 @@ function plot_element(element_number::Int64, designs::Dict;
 
 	tendon = poly!(axs_design, tendon_points, color = :skyblue,alpha = 0.1, transparent = true)
 	tendon_pts = scatter!(axs_design, tendon_points)
-	tendon = lines!(axs_design, x_range.+250, -tendon_profile)
+	tendon = lines!(axs_design, x_range, -tendon_profile)
 
 	axs_axial  = Axis(g[2,1],aspect = 10,
-	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Axial [kN]", 
+	limits = (x_range[1],x_range[end]+600, nothing, nothing),ylabel = "Axial [kN]", 
 	)
 	
 	axs_moment = Axis(g[3,1],aspect = 10,
-	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Moment [kNm]",
+	limits = (x_range[1],x_range[end]+600, nothing, nothing),ylabel = "Moment [kNm]",
 	)
 	axs_shear  = Axis(g[4,1],aspect = 10,
-	limits = (x_range[1]-100,x_range[end]+600, nothing, nothing),ylabel = "Shear [kN]", 
+	limits = (x_range[1],x_range[end]+600, nothing, nothing),ylabel = "Shear [kN]", 
 	)
 	hidexdecorations!(axs_design, grid = false)
 	hidexdecorations!(axs_axial, grid = false)
@@ -615,7 +635,7 @@ plot_element(1, designs)
 
 for i in 1:19
 	f = plot_element(i, designs)
-	save("src/Results/Results6/$i.png",f)
+	save("src/Results/Results_"*date*"/$i.png",f)
 end
 
 #summarize the result. 
@@ -659,7 +679,7 @@ for i in 1:length(unique_stack_name)
 end
 
 csv_output = DataFrame(:fc′=> csv_fc′, :dosage=> csv_dosage, :fR1=> csv_fR1, :fR3=>csv_fR3)
-CSV.write(joinpath(@__DIR__, "08_03_mix_specs.csv"), csv_output)
+CSV.write(joinpath(@__DIR__, date*"_mix_specs.csv"), csv_output)
 
 
 
