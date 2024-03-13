@@ -32,7 +32,7 @@ include("Functions/interpolations.jl");
 2. Turn everything into a gradient based optimization
 """
 
-date ="12_03";
+date ="13_03";
 version = "01";
 imagesavepath = "src//Images//Demo//"*date*"_";
 println("Date: $date \nFile version $version")
@@ -321,24 +321,20 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			#output empty parameters (In this case 0)
 			elements_designs[i] = [0]
     		sections_to_designs[elements_to_sections][catalog_keys] .= [0.]
-		else
+		else #we start the searching here.
 			println("###")
-			println("making element $i")
+			println("Making element $i")
 			println("final_design_index is $final_design_index")
 	        this_fpe  = mid_catalog[final_design_index, :fpe] 
 	        this_as   = mid_catalog[final_design_index, :as]
 			this_type = mid_catalog[final_design_index, :T]
 
-	        # sections_designs = Vector{Vector}(undef, ns)
 			sections_designs = Dict{Int64,  Dict{Symbol,Union{Float64,Int64,String}}}(k =>Dict() for k in 1:ns) 
 	        for is in eachindex(elements_to_sections[i])
 	            #current section index
 	            s = elements_to_sections[i][is]
 	
 	            feasible_idx = all_feasible_sections[s] # all feasible sections for this section.
-				# println("Feasible Catalog")
-	            # fc′_fpe_as(fc′::Float64, fpe::Float64, as::Float64) = fc′ == this_fc′ && fpe == this_fpe && as == this_as
-	            # fpe_as(fpe::Float64, as::Float64) = fpe == this_fpe && as == this_as
 				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
 
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
@@ -350,6 +346,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            # @show sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
 				sort!(this_catalog, [:carbon,:dps] )
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
+
 				#add maxmimum and minimum dps for this part.
 				#filter again for all of the same configuration except dps.
 				this_fc′ = this_catalog[1,:fc′]
@@ -437,21 +434,14 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			elements_designs[i] = sections_designs #, δ, δ/(Le/240)]
 	    end
 	end
-	#at this point, we have all of the designs of the elements!!!
-		# println(typeof(sections_to_designs))
+	#at this point, we have all of the designs of the elements
 	for i in ne #loop each element
 		#i is an index of an element.
 		sections = elements_to_sections[i] #sections numbers in that element.
-		#maximum sections 
-		# max_section = maximum(sections)
+
 		elements_designs[i]
 		for design_idx in eachindex(sections)
-			# @show typeof(elements_designs[i])
-			# @show typeof(elements_designs[i][design_idx])
-			# println(elements_designs[i][design_idx])
 
-			# @show sections[design_idx]
-			# @show sections_to_designs[sections[design_idx]]
 			@show elements_designs[i][design_idx]
 			sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
 		end
@@ -571,7 +561,7 @@ function plot_element(element_number::Int64, designs::Dict;
 		points = [-xmax+res + (i-1)*500 , -L ,500, L*1.5]
 		poly!(axs_design,Rect(points...), color =set_fc′[i], colorrange = (20,100), colormap = :grays)
 	end
-	Colorbar(f1[1,2], ticks = [20,30,40,50,60,70,80,90,100], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true))
+	Colorbar(f1[1,2], ticks = [20,30,40,50,60,70,80,90,100], colorrange = (40,80), colormap = cgrad(:grays,3, categorical = true, rev = true))
 	#plot section based on concrete strength 
 	# concrete = poly!(axs_design,Rect( [-xmax+res, -L, (n-1)*500, L*1.5]...), color = (:grey,0.2))
 	# concrete = poly!(axs_design,Rect( -xmax+res, -L, (n-1)*500, L*1.5), color = (:grey,0.2))
