@@ -49,34 +49,41 @@ plot_distribution(demands, catalog)
 #Get feasible sections (subcatalog) for each demand point.
 all_feasible_sections = filter_demands!(demands, catalog)
 
+Threads.nthreads()
+figures = Vector{Figure}(undef, size(demands)[1])
 #select a section to see the available designs
-for section_number in 1:size(demands)[1]
+# Threads.@threads for section_number in 1:size(demands)[1]
+	for section_number in 1:size(demands)[1]
+	@show section_number
     # section_number = 1
     figure_check_section = Figure(size=(500, 500))
     ax_1 = Axis(figure_check_section[1, 1], xlabel="Moment [kNm]", ylabel="Shear [kN]", title=string(section_number))
-    ax_2 = Axis(figure_check_section[2, 1], xlabel="dps", ylabel="T")
+    ax_2 = Axis(figure_check_section[2, 1], xlabel="dps", ylabel = "T")
 
-    for current_mid_design in all_feasible_sections[section_number]
-        scatter!(ax_1, catalog[current_mid_design, :Mu], catalog[current_mid_design, :Vu], color=catalog[current_mid_design, :fc′], colorrange=extrema(catalog[!, :fc′]))
-        scatter!(ax_2, catalog[current_mid_design, :dps], catalog[current_mid_design, :T], color=catalog[current_mid_design, :fc′], colorrange=extrema(catalog[!, :fc′]))
-    end
+    scatter!(ax_1, catalog[all_feasible_sections[section_number], :Mu], catalog[all_feasible_sections[section_number], :Vu], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
+    scatter!(ax_2, catalog[all_feasible_sections[section_number], :dps], catalog[all_feasible_sections[section_number], :T], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
+
     scatter!(ax_1, demands[section_number, :mu], demands[section_number, :vu], marker='x')
     type_map = Dict("primary" => 3, "secondary" => 3, "columns" => 2)
     scatter!(ax_2, demands[section_number, :ec_max], getindex.(Ref(type_map), demands[section_number, :type]), marker='x')
 
-    figure_check_section
-    @show imagesavepath * "figure_check_section" * string(section_number) * ".png"
-    save(imagesavepath * "figure_check_section" * string(section_number) * ".png", figure_check_section)
+	figures[section_number] = figure_check_section
+    # figure_check_section
+    # @show imagesavepath * "figure_check_section" * string(section_number) * ".png"
+    # save(imagesavepath * "figure_check_section" * string(section_number) * ".png", figure_check_section)
+end
+
+for i in eachindex(figures)
+	save(imagesavepath * "figure_check_section" * string(i) * ".png", figures[i])
 end
 
 for i in 1:length(all_feasible_sections)
-    println("Section $i")
+    print("Section $i")
     println(length(all_feasible_sections[i]))
 end
 
-elements_designs, elements_to_sections, sections_to_designs = find_optimum(all_feasible_sections, demands)
+elements_designs, elements_to_sections, sections_to_designs = find_optimum(all_feasible_sections, demands);
 println(elements_designs)
-
 
 elements_designs_fielded = Vector{Dict{String,Real}}()
 # for i in eachindex(elements_designs)

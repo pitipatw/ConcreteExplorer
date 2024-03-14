@@ -45,6 +45,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
 				mod(x5,T) == 0, # T is the numbers, 3 belongs ot Primary and Secondary, 2 belongs to Columns, which has 2 and 4. 
             catalog
         )
+        @assert minimum(feasible_sections[!, :Vu]) >= vu
 		# @show minimum(feasible_sections[:, :Mu])
         if size(feasible_sections)[1] == 0 #if the number of feasible results = 0
             println(feasible_sections[!, :ID])
@@ -116,6 +117,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
         #select each design, check if as and fpe exist for the the section
 		total_mid_catalog = size(mid_catalog)[1]
 		final_design_index = 0 
+		found_all = true #define here so it is availables outside of the for loop.
         for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
             current_mid_design = mid_catalog[d_idx, :]
 			this_fpe  = current_mid_design[:fpe]
@@ -194,7 +196,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				maximum_dps = maximum(constrained_catalog[!, :dps])
 				minimum_dps = minimum(constrained_catalog[!, :dps])
 
-				@show vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
+				# @show vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
 	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps]))
 	        end
 
@@ -273,6 +275,49 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	end
 	#at this point, we have all of the designs of the elements
 
+	#Determine the axial force.
+	
+	# find the angle between the support face and the next deviated shape. 
+
+	μs = 0.3
+	for e in ne
+
+		element_designs = elements_designs[e]
+		ns = length(element_designs)
+		support_dps = element_designs[1][:dps]
+		next_dps = element_designs[2][:dps]
+	
+		another_support_dps = element_designs[ns][:dps]
+		another_next_dps = element_designs[ns-1][:dps]
+	
+		as = element_designs[1][:as]
+		fpe = element_designs[1][:fpe]
+		
+		#There is a symmetry (there must be a symmetry)
+		@assert support_dps == another_support_dps "Symmetry Error at supports: $support_dps ≠ $another_support_dps."
+		@assert next_dps == another_next_dps "Symmetry Error next to supports: $next_dps ≠ $another_next_dps."
+		
+		L = 500.0 # That's the distance between the 2 deviators.
+		θ = atan((next_dps-support_dps)/L)
+		# rad2deg(θ)
+		axial_component = as*fpe*cos(θ)
+		maxV = 0
+		for i in eachindex(element_designs)
+			println(element_designs[i][:Vu])
+			if element_designs[i][:Vu] > maxV 
+				maxV = element_designs[i][:Vu]
+			end
+		end
+		
+		required_normal_force = maxV/μs
+		axial_component = as*fpe*cos(θ)
+		additional_force = required_normal_force - axial_component
+	
+		for s in eachindex(element_designs)
+			element_designs[s][:axial_force] = additional_force
+		end
+	end
+
 	#now we are generating different output format for the ease of use in the later steps.
 	for i in ne #loop each element
 		#i is an index of an element.
@@ -281,7 +326,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		elements_designs[i]
 		for design_idx in eachindex(sections)
 
-			@show elements_designs[i][design_idx]
+			# @show elements_designs[i][design_idx]
 			sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
 		end
 	end
