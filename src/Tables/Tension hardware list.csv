@@ -1,0 +1,5 @@
+﻿Type,Manufacturer,Description,Part number,Breaking load (kN),Rope diameter,Thread diameter,Adjustment length (mm),Material,Link
+Swaged fork,Carlstahl,"Fork with internal thread, swaged",811-1200-01 ,77,12,M16,26,316,https://www.carlstahl-architektur.com/fileadmin/user_upload/I-SYS_VERSION_09_2020.pdf
+Swaged fork,Carlstahl,"Fork with internal thread, swaged",811-1600-01 ,133,16,M20,30,316,https://www.carlstahl-architektur.com/fileadmin/user_upload/I-SYS_VERSION_09_2020.pdf
+Swaged fork,Carlstahl,"Turnbuckle with fork, swaged",870-1200,93.6,12,M20,60,316,https://www.carlstahl-architektur.com/fileadmin/user_upload/I-SYS_VERSION_09_2020.pdf
+Swaged fork,Carlstahl,"Turnbuckle with fork, swaged",870-1600,133,16,M24,90,316,https://www.carlstahl-architektur.com/fileadmin/user_upload/I-SYS_VERSION_09_2020.pdf
