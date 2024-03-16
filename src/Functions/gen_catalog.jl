@@ -70,7 +70,7 @@ function get_catalog(L, t, Lc;
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
         # range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
-        range_as = 2/4*[12, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+        range_as = 2/4*[12].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
 
         range_dps_2 = [0.0]
         range_dps_3 = vcat(0.0:50.0:300.0) 

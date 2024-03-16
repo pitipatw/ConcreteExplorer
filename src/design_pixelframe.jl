@@ -28,7 +28,7 @@ include("Functions//interpolations.jl");
 2. Turn everything into a gradient based optimization
 """
 
-date = "15_03";
+date = "16_03";
 version = "01";
 imagesavepath = "src//Images//Demo//" * date * "_";
 println("Date: $date \nFile version $version")
@@ -36,13 +36,13 @@ println("Date: $date \nFile version $version")
 # Load the design catalog
 # Currently using version FEB6_4"""
 # catalog = CSV.read("src/Catalogs/MAR08_1_catalog_alltypes.csv", DataFrame);
-catalog = CSV.read("src//Catalogs//15_03_catalog_for_test.csv", DataFrame);
+catalog = CSV.read("src//Catalogs//16_03_catalog_for_test.csv", DataFrame);
 
 println(catalog[1:20, :]);
 
 #load demands into a dictionary
 # demand_path = joinpath(@__DIR__, "Demands/test_input_CISBAT_dataset.json");
-demand_path = joinpath(@__DIR__, "test_demands.json");
+demand_path = joinpath(@__DIR__, "16_03_test_demands.json");
 # loaded_demands = JSON.parsefile(joinpath("src//test_demands.json"), dicttype =Dict{String, Vector{Union{Int64,Float64, String}}} );
 
 demands = preprocessing(demand_path);
@@ -148,15 +148,15 @@ for i in eachindex(elements_designs)
         element = demands[s, :e_idx]
         if type == "primary"
             if max_primary[2] < load
-                max_primary = [element, load]
+                @show max_primary = [element, load]
             end
         elseif type == "secondary"
             if max_secondary[2] < load
-                max_secondary = [element, load]
+                @show max_secondary = [element, load]
             end
         elseif type == "columns"
             if max_column[2] < load
-                max_column = [element, load]
+                @show max_column = [element, load]
             end
         end
     end
@@ -208,22 +208,23 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     L::Float64=250.0)
 
     sections = elements_to_sections[element_number]
+    @show ns = length(sections)
     # element_number = string(element_number)
 
     L = elements_designs[element_number][1][:L]
     t = elements_designs[element_number][1][:t]
     Lc = elements_designs[element_number][1][:Lc]
 
-    set_fc′   = [elements_designs[element_number][i][:fc′] for i in 1:12]
-    set_as    = [elements_designs[element_number][i][:as] for i in 1:12]
-    set_fps   = [elements_designs[element_number][i][:fps] for i in 1:12]
-    set_P     = [elements_designs[element_number][i][:load] for i in 1:12]
-    set_axial_force = [elements_designs[element_number][i][:axial_force] for i in 1:12]
-    tendon_profile  = [elements_designs[element_number][i][:dps] for i in 1:12]
-    axial_capacity  = [elements_designs[element_number][i][:Pu] for i in 1:12]
-    moment_capacity = [elements_designs[element_number][i][:Mu] for i in 1:12]
-    shear_capacity  = [elements_designs[element_number][i][:Vu] for i in 1:12]
-    type = [elements_designs[element_number][i][:T] for i in 1:12]
+    set_fc′   = [elements_designs[element_number][i][:fc′] for i in 1:ns]
+    set_as    = [elements_designs[element_number][i][:as] for i in 1:ns]
+    set_fps   = [elements_designs[element_number][i][:fps] for i in 1:ns]
+    set_P     = [elements_designs[element_number][i][:load] for i in 1:ns]
+    set_axial_force = [elements_designs[element_number][i][:axial_force] for i in 1:ns]
+    tendon_profile  = [elements_designs[element_number][i][:dps] for i in 1:ns]
+    axial_capacity  = [elements_designs[element_number][i][:Pu] for i in 1:ns]
+    moment_capacity = [elements_designs[element_number][i][:Mu] for i in 1:ns]
+    shear_capacity  = [elements_designs[element_number][i][:Vu] for i in 1:ns]
+    type = [elements_designs[element_number][i][:T] for i in 1:ns]
 
     axial_demand  = [demands[i, :pu] for i in sections]
     moment_demand = [demands[i, :mu] for i in sections]
@@ -235,16 +236,16 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     res = mod(n, 2) * 250
     xmax = div(n, 2) * 500
     x_1 = -xmax + 250 - res
-    x_n = xmax - 250 - res
+    x_n = xmax - 250 + res
     x_range = x_1:500:x_n
 
     #create a bands (polygon of possible tendon profile)
     tendon_points = Matrix{Int64}(undef, 2, 2 * n)
     for i in 1:n
-        tendon_points[:, i] = [500 * (i) - xmax - 250, -elements_designs[element_number][i][:min_dps]]
+        tendon_points[:, i] = [x_range[i], -elements_designs[element_number][i][:min_dps]]
     end
     for i in 1:n
-        tendon_points[:, 2*n-i+1] = [500 * (i) - xmax - 250, -elements_designs[element_number][i][:max_dps]]
+        tendon_points[:, 2*n-i+1] = [x_range[i], -elements_designs[element_number][i][:max_dps]]
     end
 
     f1 = Figure(size=(1200, 600))
@@ -258,35 +259,45 @@ function plot_element(element_number::Int64, elements_designs::Dict;
         ylabel="y"
     )
 ypos = 0
-    for i in 1:n
-        if type[1] == 3
-            points = [-xmax + res + (i - 1) * 500, -L, 500, L * 1.5]
-            section_pts = make_Y_layup_section(L,t,Lc)
-                for s in section_pts.solids
-                    poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
-                end
-            ypos = 150
-        elseif type[1] == 2 
-            points = [-xmax + res + (i - 1) * 500, -0.5*L, 500, L]
-            section_pts = make_X2_layup_section(L,t,Lc)
-            for s in section_pts.solids
-                poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
-            end
-            ypos = -250
-        elseif type[1] == 4
-            points = [-xmax + res + (i - 1) * 500, -L, 500, 2*L]
-            section_pts = make_X4_layup_section(L,t,Lc)
-            for s in section_pts.solids
-                poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
-            end
-            ypos = -350
-        else
-            println("Invalid Type")
-        end
-        
-        poly!(axs_design, Rect(points...), color=set_fc′[i], colorrange=(20, 100), colormap=:grays, strokecolor= :black,strokewidth = 2)
+    points = []
+    if type[1] == 3
+        for i in 1:n
+            points = [x_range[i]-250, -L, 500, L * 1.5]
+            poly!(axs_design, Rect(points...), color=set_fc′[i], colorrange=(20, 100), colormap=:grays, strokecolor= :black,strokewidth = 2)
 
+        end
+        section_pts = make_Y_layup_section(L,t,Lc)
+        for s in section_pts.solids
+            poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
+        end
+        ypos = 150
+    elseif type[1] == 2 
+        for i in 1:n
+            points = [x_range[i]-250, -0.5*L, 500, L]
+            poly!(axs_design, Rect(points...), color=set_fc′[i], colorrange=(20, 100), colormap=:grays, strokecolor= :black,strokewidth = 2)
+
+        end
+        section_pts = make_X2_layup_section(L,t,Lc)
+        for s in section_pts.solids
+            poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
+            
+        end
+        ypos = -250
+    elseif type[1] == 4
+        for i in 1:n
+            points = [x_range[i]-250, -L, 500, 2*L]
+            poly!(axs_design, Rect(points...), color=set_fc′[i], colorrange=(20, 100), colormap=:grays, strokecolor= :black,strokewidth = 2)
+
+        end
+        section_pts = make_X4_layup_section(L,t,Lc)
+        for s in section_pts.solids
+            poly!(axs_design, s.points.+[xmax+250;0], color = :grey)
+        end
+        ypos = -350
+    else
+        println("Invalid Type")
     end
+        
     Colorbar(f1[1, 2], ticks=[40,60,80], colorrange=(40, 80), colormap=cgrad(:grays, 3, categorical=true, rev=true))
 
 
@@ -305,7 +316,7 @@ ypos = 0
     )
 
     axs_moment = Axis(g[3, 1], aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax, nothing, nothing), ylabel="Moment [kNm]",
+        limits=(-1.2*xmax, 1.2*xmax, nothing, 1000), ylabel="Moment [kNm]",
     )
     axs_shear = Axis(g[4, 1], aspect=10,
         limits=(-1.2*xmax, 1.2*xmax, nothing, nothing), ylabel="Shear [kN]",
@@ -371,7 +382,7 @@ for i in 1:12
     push!(output,column_design[i])    
 end
 
-open("src//Results//15_03_design_results_fortest.json", "w") do f
+open("src//Results//16_03_design_results_fortest.json", "w") do f
     JSON.print(f, output)
 end
 

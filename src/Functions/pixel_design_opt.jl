@@ -206,17 +206,19 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				if this_type == "secondary"
 					fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type
 					this_catalog = filter([:fpe, :as, :dps,:T] => fpe_as_dps_type, section_feasible_catalog)
+					sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
+
 				else
 					fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
 					this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+					sort!(this_catalog, [:carbon,:dps] )
 				end
 	            # this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
 				if size(this_catalog)[1] == 0 
 					@show this_catalog
 				end
 
-	            sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
-				# sort!(this_catalog, [:carbon,:dps] )
+				
 	            select_ID = this_catalog[1, :ID] #The first one is the lowest embodied carbon and highest dps.
 
 				#add maxmimum and minimum dps for this part.
@@ -323,18 +325,18 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	
 		another_support_dps = element_designs[ns][:dps]
 		another_next_dps = element_designs[ns-1][:dps]
-	
-		as = element_designs[1][:as]
-		fpe = element_designs[1][:fpe]
-		
+			
 		#There is a symmetry (there must be a symmetry)
 		@assert support_dps == another_support_dps "Symmetry Error at supports: $support_dps ≠ $another_support_dps."
 		@assert next_dps == another_next_dps "Symmetry Error next to supports: $next_dps ≠ $another_next_dps."
 		
+		as = element_designs[1][:as]
+		fps = element_designs[1][:fps]
+
 		L = 500.0 # That's the distance between the 2 deviators.
 		θ = atan((next_dps-support_dps)/L)
 		# rad2deg(θ)
-		axial_component = as*fpe*cos(θ)
+		axial_component = as*fps*cos(θ)/1000 #kN
 		maxV = 0
 		for i in eachindex(element_designs)
 			println(element_designs[i][:Vu])
@@ -342,9 +344,8 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				maxV = element_designs[i][:Vu]
 			end
 		end
-		
-		required_normal_force = maxV/μs
-		axial_component = as*fpe*cos(θ)
+
+		required_normal_force = maxV/μs #kN
 		additional_force = required_normal_force - axial_component
 	
 		for s in eachindex(element_designs)
