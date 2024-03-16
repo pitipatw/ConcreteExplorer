@@ -10,6 +10,17 @@ function preprocessing(demand_path::String)::DataFrame
     end
     println(demands[1:10, :])
 
+    #make the correct types
+    demands[!, :e_idx]= Int.(demands[!,:e_idx])
+    demands[!, :s_idx]= Int.(demands[!,:s_idx])
+    demands[!, :idx]= Int.(demands[!,:idx])
+    demands[!, :ec_max]= Float64.(demands[!,:ec_max])
+    demands[!, :pu]= Float64.(demands[!,:pu])
+    demands[!, :mu]= Float64.(demands[!,:mu])
+    demands[!, :vu]= Float64.(demands[!,:vu])
+
+
+
     #Modify the section and element indices (if needed)
     println("__________")
 
@@ -64,7 +75,8 @@ Make the element indices unique
     f_indices_check = Figure(size=(800, 500))
     ax_indices_check = Axis(f_indices_check[1, 1], title="Indices Check", titlesize=40,
         xlabel="Global Index", ylabel="Element Index", xticks=0:10:size(demands)[1]*1.2, yticks=1:1:30)
-    scatter!(ax_indices_check, demands[!, "idx"], demands[!, "e_idx"], color=[color_mapping[t] for t in demands[!, :type]])
+
+    scatter!(ax_indices_check, Int.(demands[!, "idx"]), Int.(demands[!, "e_idx"]), color=[color_mapping[t] for t in demands[!, :type]])
     f_indices_check
 
     save(imagesavepath * "f_indices_check.png", f_indices_check)

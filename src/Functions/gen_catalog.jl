@@ -69,10 +69,11 @@ function get_catalog(L, t, Lc;
         @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
-        range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+        # range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+        range_as = 2/4*[12, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
 
         range_dps_2 = [0.0]
-        range_dps_3 = vcat(0.0:50.0:350.0) 
+        range_dps_3 = vcat(0.0:50.0:300.0) 
         range_dps_4 = [0.0]
 
         range_fpe = (0.00:0.005:0.1) * 1860.0 #MPa
@@ -90,7 +91,7 @@ function get_catalog(L, t, Lc;
     @show n_result3 = length.([range_dps_3,range_fc′, range_as,  range_fpe])
     @show n_result4 = length.([range_dps_4,range_fc′, range_as,  range_fpe])
     @show n_total = sum(prod.([n_result2, n_result3, n_result4]))
-    results = Matrix{Float64}(undef, n_total, 10 + 2 + 3) #L t Lc
+    results = Matrix{Float64}(undef, n_total, 11 + 2 + 3) #L t Lc
     #we will loop through these three parameters and get the results.
     # with constant cross section properties.
     for idx_type in eachindex(range_type)
@@ -124,7 +125,7 @@ function get_catalog(L, t, Lc;
                         #create a Section (ReinforcedConcreteSection or PixelFrameSection <: Section)
                         # pixelframesection = PixelFrameSection(compoundsection, fc′...) 
                         # pu, mu, vu = get_capacities(pixelframesection)
-                        pu, mu, vu, embodied = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
+                        pu, mu, vu, embodied, fps = get_capacities(compoundsection, fc′, fR1, fR3, as, dps, fpe, L, dosage)
 
 
                         idx_all = [idx_dps, idx_fc′, idx_as, idx_fpe]
@@ -141,14 +142,14 @@ function get_catalog(L, t, Lc;
                         end
                         idx = mapping(sub_n, idx_all)
                         # @show idx, T
-                        results[idx + shift, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, pu, mu, vu, embodied, L, t, Lc, T]
+                        results[idx + shift, :] = [fc′,dosage, fR1, fR3, as, dps, fpe, fps, pu, mu, vu, embodied, L, t, Lc, T]
                     end
                 end
             end
         end
     end
 
-    df = DataFrame(results, [:fc′, :dosage,:fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T])
+    df = DataFrame(results, [:fc′, :dosage,:fR1, :fR3, :as, :dps, :fpe, :fps, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T])
     df[!, :ID] = 1:n_total
     println("Got Catalog with $n_total outputs")
     return df # results # DataFrame(results)

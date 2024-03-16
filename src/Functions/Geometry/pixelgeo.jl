@@ -110,7 +110,8 @@ function make_X2_layup_section(L::Real, t::Real, Lc::Real; n=10, offset=0.0)
     #bottom pixel
     bottom_pixel = rotate_2d_about_origin.(left_pixel, pi / 2)
 
-    distance = top_pixel[2][1] - right_pixel[end][1]
+    distance = (top_pixel[2][1] - right_pixel[end][1])/2
+    distance = 0
 
     right_pixel = [[point[1] + distance, point[2]] for point in right_pixel]
     top_pixel = [[point[1], point[2] + distance] for point in top_pixel]

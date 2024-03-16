@@ -1,15 +1,15 @@
 #create beams demands from the varying 4-point load test.
 using DataFrames
 using JSON
-P = 10:10:1000 #kN?
+P = 10:10:10000 #kN?
 Types = ["primary", "secondary", "columns"]
 span_length = 6000.0
 S_idx = Int.(1:span_length/500)
 E_idx = 1:length(P);
-fields = [:e_idx, :s_idx, :pu, :mu, :vu, :ec_max, :type]
+fields = [:e_idx, :s_idx, :pu, :mu, :vu, :ec_max, :type, :load]
 
 function PMV(p,x,t,L1,L2)
-    @show total_L = 2*L1+L2
+    total_L = 2*L1+L2
     if t == "columns"
             Pout = p
             Vout = 0 
@@ -32,7 +32,7 @@ function PMV(p,x,t,L1,L2)
         println("Error, Invalid section type")
     end
 
-    return Pout, Vout, Mout 
+    return Pout, Vout, Mout/1000 
 end
 
 
@@ -57,8 +57,8 @@ function get_demands(p::Real, t::String;
         uip, uiv, uim = PMV(p,ux, t, L1,L2)
         
         demand_P[ix] = maximum([lip, uip])
-        demand_V[ix] = maximum([liv, uip])
-        demand_M[ix] = maximum([lim, uip])
+        demand_V[ix] = maximum([liv, uiv])
+        demand_M[ix] = maximum([lim, uim])
     end
 
     return demand_P, demand_V, demand_M 
@@ -75,7 +75,16 @@ for ip in eachindex(P)
         #We have to distribute them onto each index of the output json (DataFrame).
         for s_idx in S_idx 
             # fields = [:e_idx, :s_idx, :pu, :mu, :vu, :ec_max, :type]
-            entry = [ip,s_idx, Pdemand[s_idx], Mdemand[s_idx], Vdemand[s_idx], 0, t]
+            if t == "primary"
+                dps_max = 1.5*205
+            elseif t == "secondary"
+                dps_max = 205
+            elseif t == "columns"
+                dps_max = 0
+            else
+                println("Invalid Type")
+            end
+            entry = [ip,s_idx, Pdemand[s_idx], Mdemand[s_idx], Vdemand[s_idx], dps_max, t, p]
             # @show entry = Dict(fields .=> [ip,s_idx, P[s_idx], M[s_idx], V[s_idx], Inf, t])
             push!(demands,entry)
         end

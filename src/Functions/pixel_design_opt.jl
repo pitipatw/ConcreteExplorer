@@ -41,11 +41,11 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
                 x1 >= pu &&
                 x2 >= mu &&
                 x3 >= vu &&
-                x4 <= ec_max * 1000 &&
+                x4 <= ec_max &&
 				mod(x5,T) == 0, # T is the numbers, 3 belongs ot Primary and Secondary, 2 belongs to Columns, which has 2 and 4. 
             catalog
         )
-        @assert minimum(feasible_sections[!, :Vu]) >= vu
+        # @assert minimum(feasible_sections[!, :Vu]) >= vu
 		# @show minimum(feasible_sections[:, :Mu])
         if size(feasible_sections)[1] == 0 #if the number of feasible results = 0
             println(feasible_sections[!, :ID])
@@ -79,8 +79,9 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
     elements_designs = Dict(k => Dict() for k in unique(demands[!, :e_idx]))  #element index to list of designs
     sections_to_designs = Dict(k => Vector{Float64}() for k in demands[!, :idx]) #each section to its design
 	sections_to_designs = Dict(k => Dict() for k in demands[!, :idx]) 
+	skipped_elements = Vector{Int64}()
 
-	catalog_keys::Vector{Symbol} = [:fc′, :dosage, :fR1, :fR3, :as, :dps, :fpe, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T, :ID];
+	catalog_keys::Vector{Symbol} = [:fc′, :dosage, :fR1, :fR3, :as, :dps, :fpe, :fps, :Pu, :Mu, :Vu, :carbon, :L, :t, :Lc, :T, :ID];
 	
 	for i in 1:total_number_of_sections
 		e = demands[i, :e_idx] 
@@ -98,7 +99,22 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		
         sections = elements_to_sections[i] #sections associated with this element
         ns = length(sections)     # number of sections in this element 
+		this_type = demands[sections[1],:type]
 
+		#check if there is a section in that element that's not feasible (available section -> [0]),
+		# if this exists, put result into a vector of 0 and skip this element. 
+		for s in sections
+			if all_feasible_sections[s][1] == 0 
+				push!(skipped_elements, i)
+				break
+			end
+		end
+
+		if i ∈ skipped_elements
+			elements_designs[i] = Dict(sections .=> 0)
+			println("Element $i skipped")
+			continue
+		end
         #start from the middle-ish section (n/2 or (n-1)/2), it must be the section with the smallest available configuration for moment.
         #note that section is in the form of 1,2,3,..., ns.
         mid = div(ns, 2)
@@ -119,14 +135,21 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		final_design_index = 0 
 		found_all = true #define here so it is availables outside of the for loop.
         for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
+
             current_mid_design = mid_catalog[d_idx, :]
 			this_fpe  = current_mid_design[:fpe]
 			this_as   = current_mid_design[:as]
 			this_type = current_mid_design[:T]
-			#create a filter function that check every constrained parameter at once.
-			fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+			this_dps = current_mid_design[:dps]
 
+			#create a filter function that check every constrained parameter at once.
 			found_all = true
+
+			if this_type == "secondary"
+				fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type
+			else
+				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+			end
             # serviceability_check = true # Will add this.
 
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
@@ -135,7 +158,11 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				section_feasible_catalog = catalog[feasible_sections,:]
       
 				#a check function, ensures that these parameters happen at the same time.
-	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+				if this_type == "secondary"
+					this_catalog = filter([:fpe, :as, :dps,:T] => fpe_as_dps_type, section_feasible_catalog)
+				else
+					this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+				end
 
 				if size(this_catalog)[1] == 0
                     found_all = false #if this happens at the last possible mid section, the found_all would trigger the next if-else check on the next block.
@@ -165,7 +192,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	        this_fpe  = mid_catalog[final_design_index, :fpe] 
 	        this_as   = mid_catalog[final_design_index, :as]
 			this_type = mid_catalog[final_design_index, :T]
-
+			this_dps = mid_catalog[final_design_index, :dps]
 			sections_designs = Dict{Int64,  Dict{Symbol,Union{Float64,Int64,String}}}(k =>Dict() for k in 1:ns) 
 	        for is in eachindex(elements_to_sections[i])
 
@@ -173,17 +200,24 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	            s = elements_to_sections[i][is]
 	
 	            feasible_idx = all_feasible_sections[s] # all feasible sections for this section.
-				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
-
+				# fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+				section_feasible_catalog = catalog[feasible_idx,:]
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
-	            this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
+				if this_type == "secondary"
+					fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type
+					this_catalog = filter([:fpe, :as, :dps,:T] => fpe_as_dps_type, section_feasible_catalog)
+				else
+					fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+					this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+				end
+	            # this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
 				if size(this_catalog)[1] == 0 
 					@show this_catalog
 				end
 
-	            # @show sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
-				sort!(this_catalog, [:carbon,:dps] )
-	            select_ID = this_catalog[1, :ID] #The first one is the lowest.
+	            sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
+				# sort!(this_catalog, [:carbon,:dps] )
+	            select_ID = this_catalog[1, :ID] #The first one is the lowest embodied carbon and highest dps.
 
 				#add maxmimum and minimum dps for this part.
 				#filter again for all of the same configuration except dps.
@@ -197,7 +231,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				minimum_dps = minimum(constrained_catalog[!, :dps])
 
 				# @show vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
-	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps]))
+	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps, :load]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps, demands[s,:load]]))
 	        end
 
 	  #       Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
@@ -281,7 +315,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 
 	μs = 0.3
 	for e in ne
-
+		if e ∉ skipped_elements
 		element_designs = elements_designs[e]
 		ns = length(element_designs)
 		support_dps = element_designs[1][:dps]
@@ -317,18 +351,20 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			element_designs[s][:axial_force] = additional_force
 		end
 	end
+	end
 
 	#now we are generating different output format for the ease of use in the later steps.
-	for i in ne #loop each element
-		#i is an index of an element.
-		sections = elements_to_sections[i] #sections numbers in that element.
+	for e in ne #loop each element
+		if e ∉ skipped_elements 
+					#i is an index of an element.
+		sections = elements_to_sections[e] #sections numbers in that element.
 
-		elements_designs[i]
+		# elements_designs[i]
 		for design_idx in eachindex(sections)
-
 			# @show elements_designs[i][design_idx]
-			sections_to_designs[sections[design_idx]] = elements_designs[i][design_idx]
+			sections_to_designs[sections[design_idx]] = elements_designs[e][design_idx]
 		end
 	end
-    return elements_designs, elements_to_sections, sections_to_designs
+	end
+    return elements_designs, elements_to_sections, sections_to_designs, skipped_elements
 end

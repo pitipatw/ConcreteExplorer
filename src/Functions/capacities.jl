@@ -83,7 +83,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
         # end
         mn = (fc′- fpe*as/compoundsection.area)*compoundsection.Sx/1e6
         mu = 0.65*mn #compression control section. 
-        return mu
+        return mu , 0.0
     end 
     #Pure Moment Capacity
     #concrete area
@@ -94,7 +94,17 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     fps1 = fpe + 70 + fc′ / (100 * ρ) #
     fps2 = fpe + 420
     fps3 = 1300.0 #Yield str of steel from ASTM A421
-    fps = minimum([fps1, fps2, fps3])
+    
+    #this is from the hardware constraints
+    # hardware_properties = CSV.read("src//Tables//Tension hardware list.csv", DataFrame)
+    
+    # limited_load = hardware_properties[1,"Breaking load (kN)"]
+    # limited_diameter = hardware_properties[1,"Rope diameter"]*1000 #N
+    # limited_area = pi*(limited_diameter/2)^2 #mm2
+    # fps4 = limited_load/limited_area #MPa [N/mm2]
+    fps4 = 661 #MPa (minimum from the table)
+
+    fps = minimum([fps1, fps2, fps3,fps4])
     #concrete compression area balanced with steel tension force.
     acomp = clamp(as * fps / (0.85 * fc′),0, 0.99*ac)
 
@@ -180,6 +190,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
             push!(his_local_c,c_local)
             push!(his_ϵs, ϵs)
             push!(his_acomp, acomp)
+            fps = fps_new
         end
     end
     #making sure that ϵc is <= 0.003
@@ -206,7 +217,7 @@ function get_Mu(compoundsection::CompoundSection, fc′::Float64, as::Float64, f
     mn = 0.85 * fc′ * ac * arm / 1e6 #[kNm]
     mu = get_ϕ(ϵs) * mn #[kNm]
 
-    return mu
+    return mu, fps
 end
 
 """
@@ -244,9 +255,10 @@ function get_Vu(compoundsection::CompoundSection, fc′::Float64, fR1::Float64, 
     γc = 1.0
 
     #Fib 2010 gives V design which is Vu. Therefore, no reduction factor of 0.75 is needed.
-    vu = ashear * (0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * σcp)
+    vn = ashear * (0.18 / γc * k * (100.0 * ρs * (1.0 + 7.5 * fFtuk / fctk) * fck)^(1 / 3) + 0.15 * σcp)
     
     # vu = 0.75 * vn/1000 # kN
+    vu = vn/1000 # kN
  return vu
 
 end
@@ -265,7 +277,7 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
     echo = false)
 
     pu = get_Pu(compoundsection, fc′, as, fpe)
-    mu = get_Mu(compoundsection, fc′, as, fpe, dps, L)
+    mu , fps = get_Mu(compoundsection, fc′, as, fpe, dps, L)
     vu = get_Vu(compoundsection, fc′, fR1, fR3, as, fpe, L,)
 
     #Embodied Carbon Calculation
@@ -292,7 +304,7 @@ function get_capacities(compoundsection, fc′::Float64, fR1::Float64, fR3::Floa
 #parallel plot the result 
 
 #Scatter plot the result.
-    return pu, mu, vu, embodied
+    return pu, mu, vu, embodied, fps
 end
 
 
