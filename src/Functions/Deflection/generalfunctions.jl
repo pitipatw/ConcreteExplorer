@@ -1,4 +1,4 @@
-include("Geometry/pixelgeo.jl")
+include("../Geometry/pixelgeo.jl")
 
 abstract type AbstractStructuralElement end 
 abstract type AbstractPixelFrameElement <: AbstractStructuralElement end 

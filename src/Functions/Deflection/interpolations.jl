@@ -33,7 +33,7 @@ end
 Get compression depth of the section, given a compression area.
 """
 function get_C(pixelframeelement::PixelFrameElement, area::Float64)
-    c = depth_from_area(pixelframeelement.compoundsection, area)
+    c = depth_from_area(pixelframeelement.compoundsection, area)  
     return c
 end 
 
@@ -43,29 +43,31 @@ csv file dataformat is C,Icrack
 """
 function get_Icrack(C::Float64; test::Bool = false)
     if test
-    #read the csv file
-    filename = joinpath(@__DIR__,"table_CtoIcrack.csv") #Make sure you got csv in the name
-    data = CSV.read(filename, DataFrame)
-    #get the column of C
-    C_data = data[:,1]
-    #get the column of Icrack
-    Icrack_data = data[:,2]
-    #get the index of the closest value of C
-    index = findmin(abs.(C_data .- C))[2]
-    #get the Icrack value by interpolate between the two closest values of C
-    Ci = C_data[index]
-    Ci_1 = C_data[index+1] #the next calue of C
-    #get the Icrack value
-    Icrack = Icrack_data[index]+(Icrack_data[index+1] - Icrack_data[index])/(Ci_1 - Ci)*(C - Ci)
-    return Icrack
+        #read the csv file
+        filename = joinpath(@__DIR__,"table_CtoIcrack.csv") #Make sure you got csv in the name
+        data = CSV.read(filename, DataFrame)
+        #get the column of C
+        C_data = data[:,1]
+        #get the column of Icrack
+        Icrack_data = data[:,2]
+        #get the index of the closest value of C
+        index = findmin(abs.(C_data .- C))[2]
+        #get the Icrack value by interpolate between the two closest values of C
+        Ci = C_data[index]
+        Ci_1 = C_data[index+1] #the next calue of C
+        #get the Icrack value
+        Icrack = Icrack_data[index]+(Icrack_data[index+1] - Icrack_data[index])/(Ci_1 - Ci)*(C - Ci)
+        return Icrack
     else 
         println("Link to AsapSections' function")
         return nothing
     end
 end
 
-function get_Icrack(pixelframeelement::PixelFrameElement, c_depth::Float64)
-    compoundsection = pixelframeelement.compoundsection
+"""
+Get I crack from the section analysis at depth c. 
+"""
+function get_Icrack(compoundsection::CompoundSection, c_depth::Float64)
 
     c_depth_global = compoundsection.ymax - c_depth #global coordinate
     new_sections = Vector{SolidSection}()
