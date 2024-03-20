@@ -158,6 +158,12 @@ ypos = 0
     tendon_pts = scatter!(axs_design, tendon_points)
     tendon = lines!(axs_design, x_range, -tendon_profile, linewidth = 5)
 
+    @show tendon_points
+    for i in 1:n
+        text!(axs_design,tendon_points[1,i+n],tendon_points[2,i+n], text = string(set_as[i]))
+    end
+
+
     #add text description
     txt_force = round(maximum(set_fps.*set_as)/1000,digits = 3) #kN.
     

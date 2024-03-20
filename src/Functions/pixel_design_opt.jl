@@ -45,8 +45,8 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
 				mod(x5,T) == 0, # T is the numbers, 3 belongs ot Primary and Secondary, 2 belongs to Columns, which has 2 and 4. 
             catalog
         )
-        # @assert minimum(feasible_sections[!, :Vu]) >= vu
-		 @show minimum(feasible_sections[:, :Mu])
+        @assert minimum(feasible_sections[!, :Vu]) >= vu
+		@assert minimum(feasible_sections[:, :Mu]) >= mu
         if size(feasible_sections)[1] == 0 #if the number of feasible results = 0
             println(feasible_sections[!, :ID])
             println("section $sn: element $en")
@@ -236,7 +236,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				else
 					fpe_as_type(fpe::Float64, as::Float64, type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && type == this_type && L == this_L && t == this_t && Lc == this_Lc
 					this_catalog = filter([:fpe, :as, :T, :L,:t,:Lc] => fpe_as_type, section_feasible_catalog)
-					sort!(this_catalog, [:carbon,:dps] )
+					sort!(this_catalog, [:carbon, order(:dps, rev=true)] )
 				end
 	            # this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
 				if size(this_catalog)[1] == 0 
