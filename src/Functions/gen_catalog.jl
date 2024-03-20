@@ -10,7 +10,8 @@ include("embodiedCarbon.jl")
 include("capacities.jl")
 
 """
-Map an n dimentional vector into an index.
+function mapping(n::Vector{Int64}, idx::Vector{Int64})::Int64
+A utility function that maps an index (idx) into a global index in n dimensional vector.
 """
 function mapping(n::Vector{Int64}, idx::Vector{Int64})::Int64
     d = Vector{Int64}(undef, length(n))
@@ -25,18 +26,33 @@ function mapping(n::Vector{Int64}, idx::Vector{Int64})::Int64
 end
 
 """
-    get_catalog(test::Bool)::DataFrame
+function get_catalog(case::String; 
+fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
+
 """
 function get_catalog(case::String; 
     fc′_path::String = "src//Tables//fiber_with_extrapolation.csv")::DataFrame
 
     println("Getting fc′ info from ", fc′_path)
-    pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
+
+    if case == "myResults"
+        println("Getting catalog for myResults")
+        pixel_sections = [[i 35.0 30.0] for i in 150.0:25:300.0]
+    else
+        println("Getting catalog for the FullScaleTest")
+        pixel_sections = [205.0 35.0 30.0;] #updated by Jenna Jan 2024
+    end 
+
     nps = size(pixel_sections)[1]
     println("Getting catalog with $nps section(s)")
     out = DataFrame()
     for i in 1:size(pixel_sections)[1]
-        L, t, Lc = pixel_sections[i, :]
+        # @show pixel_sections[i,:]
+        if length(pixel_sections[i,:]) == 1 #This probably a list of list ,e.g. [[100 20 60]]
+            L, t, Lc = pixel_sections[i,:][1]
+        else
+            L, t, Lc = pixel_sections[i,:]
+        end
         sub_catalog = get_catalog(L, t, Lc, case = case, fc′_path = fc′_path)
         out = vcat(out, sub_catalog)
     end
@@ -55,7 +71,7 @@ function get_catalog(L, t, Lc;
         #test
         println("Running test case")
         range_fc′ = 28.0
-        range_as = 140.0
+        range_as  = 140.0
         range_dps = 50.0
         range_fpe = 186.0
     elseif case == "default" 
@@ -66,6 +82,7 @@ function get_catalog(L, t, Lc;
         range_fR1 = fc_fiber[!, :fR1]
         range_fR3 = fc_fiber[!, :fR3]
         range_dosage = fc_fiber[!, :dosage]
+        #in case the input lenghts are not consistant.
         @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
         @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
@@ -77,7 +94,8 @@ function get_catalog(L, t, Lc;
         range_dps_3 = vcat(0.0:50.0:300.0) 
         range_dps_4 = [0.0]
 
-        range_fpe = (0.00:0.005:0.5) * 1860.0 #MPa
+        # range_fpe = (0.00:0.005:0.2) * 1860.0 #MPa
+        range_fpe = 0.0:10.0:500.0 #MPa
         range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
     else

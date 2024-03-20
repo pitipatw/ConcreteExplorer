@@ -63,6 +63,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
     return all_feasible_sections
 end
 
+
 """
 	function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame)
 Find the optimum result for each element.
@@ -70,7 +71,16 @@ Design map from element number -> sections -> designs
     !! not optimum yet.
 Constraints for the same element.
 """
-function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame)
+function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame;
+	demands_ser::DataFrame = DataFrame(),
+	start_mid::Bool = true)
+
+	if size(demands_ser)[1] == 1 
+		println("Couldn't find service demands...")
+		println("Using ultimate demands as service demands (conservative)")
+		demands_ser = demands 
+	end
+
 	total_number_of_sections = size(demands)[1] #get total number of section points.
     ne = unique(demands[!, :e_idx]) #list of element index
 	
@@ -115,16 +125,22 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			println("Element $i skipped")
 			continue
 		end
+
+		if start_mid
         #start from the middle-ish section (n/2 or (n-1)/2), it must be the section with the smallest available configuration for moment.
         #note that section is in the form of 1,2,3,..., ns.
-        mid = div(ns, 2)
+        	mid = div(ns, 2)
+		else 
+			#otherwise, starts from 1 (shear controlled?)
+			mid = 1
+		end
         
         #get the feasible designs for the middle section
         feasible_idx = all_feasible_sections[sections[mid]]
 		println(size(feasible_idx)[1], " available sections")
 
         #catalog was already sorted, so I think we can leave this part, just filter, to save time.
-        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, order(:dps, rev = true)])
+        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, fpe, order(:dps, rev = true)])
 
         #now, loop each design in the sub catalog, see if "as" and "fpe" are available in all sections.
         #if not, remove that design from the sub catalog.
@@ -237,11 +253,23 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	        end
 
 	  #       Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
+	  #		  Then, check with the limit L/240, if pass, move on to the next element, otherwise, go to the next configuration.
 	  #       Create a pixelframeelement and/or section here with the given parameters 
-	  #       L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
-	  #       compoundsection =  make_Y_layup_section(L, t, Lc)
+	        # L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
+			L = mid_catalog[final_design_index, :L] 
+			t = mid_catalog[final_design_index, :t] 
+			Lc = mid_catalog[final_design_index, :Lc] 
+			if this_type == 2.0
+				compoundsection =  make_X2_layup_section(L, t, Lc)
+			elseif this_type == 3.0
+				compoundsection =  make_Y_layup_section(L, t, Lc)
+			elseif this_type = 4.0
+				compoundsection =  make_X4_layup_section(L, t, Lc)
+			else
+				println("Invalid type")
+			end
 	  #       pixelframeelement = PixelFrameElement() 
-	  #		# #Modified the fields inside pixelframeelement so they are met with the current configuration.
+	  #		# Modified the fields inside pixelframeelement so they are met with the current configuration.
 	  #		# pixelframeelement.compoundsection = compoundsection
 	  #       Le = ns*500.0 #500 mm per section.
 	  
