@@ -14,7 +14,7 @@ mutable struct PixelFrameSection <: AbstractPixelFrameSection
 
     pt_area::Vector{Float64}
     pt_force::Vector{Float64}
-    pt_pos::Matrix{  }
+    pt_pos::Matrix{Float64}
 
     #Material Properties
     Ec::Float64  
