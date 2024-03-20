@@ -13,13 +13,14 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     t = elements_designs[element_number][1][:t]
     Lc = elements_designs[element_number][1][:Lc]
 
-    set_fc′   = [elements_designs[element_number][i][:fc′] for i in 1:ns]
+    @show set_fc′   = [elements_designs[element_number][i][:fc′] for i in 1:ns]
     set_as    = [elements_designs[element_number][i][:as] for i in 1:ns]
     set_fps   = [elements_designs[element_number][i][:fps] for i in 1:ns]
-    set_P     = [elements_designs[element_number][i][:load] for i in 1:ns]
+    set_dosage = [elements_designs[element_number][i][:dosage] for i in 1:ns]
+    # set_P     = [elements_designs[element_number][i][:load] for i in 1:ns]
     set_axial_force = [elements_designs[element_number][i][:axial_force] for i in 1:ns]
     tendon_profile  = [elements_designs[element_number][i][:dps] for i in 1:ns]
-    axial_capacity  = [elements_designs[element_number][i][:Pu] for i in 1:ns]
+    axial_capacity  = abs.([elements_designs[element_number][i][:Pu] for i in 1:ns])
     moment_capacity = [elements_designs[element_number][i][:Mu] for i in 1:ns]
     shear_capacity  = [elements_designs[element_number][i][:Vu] for i in 1:ns]
     type = [elements_designs[element_number][i][:T] for i in 1:ns]
@@ -33,7 +34,7 @@ function plot_element(element_number::Int64, elements_designs::Dict;
         print("Invalid type")
     end
 
-    axial_demand  = [demands[i, :pu] for i in sections]
+    axial_demand  = abs.([demands[i, :pu] for i in sections])
     moment_demand = [demands[i, :mu] for i in sections]
     shear_demand  = [demands[i, :vu] for i in sections]
 
@@ -71,7 +72,7 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     )
 
     axs_moment = Axis(g[3, 1], #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, 500), ylabel="Moment [kNm]",
+        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Moment [kNm]",
     )
     axs_shear = Axis(g[4, 1], #aspect=10,
         limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Shear [kN]",
@@ -80,14 +81,14 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     linkxaxes!(axs_design, axs_axial, axs_moment, axs_shear)
 
     axs_axial_ratio = Axis(g[2, 1], yaxisposition = :right,# aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, -0.1, nothing), ylabel="Utilization [ratio]",
+        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
     )
 
     axs_moment_ratio = Axis(g[3, 1], yaxisposition =:right, #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, -0.1, nothing), ylabel="Utilization [ratio]",
+        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
     )
     axs_shear_ratio = Axis(g[4, 1], yaxisposition =:right, #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, -0.1, nothing), ylabel="Utilization [ratio]",
+        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
     )
 
     hidespines!(axs_axial_ratio)
@@ -102,8 +103,10 @@ ypos = 0
         for i in 1:n
             points = [x_range[i]-250, -L, 500, L * 1.5]
             poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange=(40, 80), colormap=cgrad(:Greys_3, 3, categorical=true), 
+            colorrange= (0,80), colormap=cgrad(:Greys_3), 
             strokecolor= :black,strokewidth = 2)
+            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
+            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
 
         end
         section_pts = make_Y_layup_section(L,t,Lc)
@@ -115,8 +118,10 @@ ypos = 0
         for i in 1:n
             points = [x_range[i]-250, -0.5*L, 500, L]
             poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange=(40, 80), colormap=cgrad(:Greys_3, 3, categorical=true), 
+            colorrange= (0,80), colormap=cgrad(:Greys_3), 
             strokecolor= :black,strokewidth = 2)
+            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
+            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
 
         end
         #plot cross section on the side of the beam plot
@@ -130,8 +135,11 @@ ypos = 0
         for i in 1:n
             points = [x_range[i]-250, -L, 500, 2*L]
             poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange=(40, 80), colormap=cgrad(:Greys_3, 3, categorical=true), 
+            colorrange= (0,80), colormap=cgrad(:Greys_3), 
             strokecolor= :black,strokewidth = 2)
+            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
+            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
+
         end
         #plot cross section on the side of the beam plot
         section_pts = make_X4_layup_section(L,t,Lc)
@@ -143,7 +151,7 @@ ypos = 0
         println("Invalid Type")
     end
         
-    Colorbar(f1[1, 2], ticks=[40,60,80], colorrange=(40, 100), colormap=cgrad(:Greys_3, 3, categorical=true))
+    Colorbar(f1[1, 2], ticks=[40,60,80], colorrange=(40, 100), colormap=cgrad(:Greys_3))
 
 
     tendon = poly!(axs_design, tendon_points, color=:skyblue, alpha=0.5, transparent=true)
@@ -154,7 +162,7 @@ ypos = 0
     txt_force = round(maximum(set_fps.*set_as)/1000,digits = 3) #kN.
     
     text!(axs_design,-xmax-500, ypos, text = "Tendon load: "*string(txt_force)*" kN")
-    text!(axs_design,-xmax+700, ypos, text = "Apply test load "*string(set_P[1])* " kN")
+    # text!(axs_design,-xmax+700, ypos, text = "Apply test load "*string(set_P[1])* " kN")
     text!(axs_design,-xmax+2000,ypos, text = "Axial post tensioned force "*string(round(set_axial_force[1], digits = 3))* " kN")
     
 
@@ -187,9 +195,9 @@ ypos = 0
     # scatter!(axs_shear, x_range, shear_demand, color=:green, step=:center, marker = 'x', markersize = 20)
 
 
-    axial_utilization  = [ axial_demand[i] == 0 ? 0 : axial_capacity[i]/axial_demand[i] for i in eachindex(axial_demand)]
-    moment_utilization = [ moment_demand[i] == 0 ? 0 : moment_capacity[i]/moment_demand[i] for i in eachindex(moment_demand)]
-    shear_utilization  = [ shear_demand[i] == 0 ? 0 : shear_capacity[i]/shear_demand[i] for i in eachindex(shear_demand)]
+    axial_utilization  = [ axial_demand[i] ≤ 0.1 ? 0 : axial_capacity[i]/axial_demand[i] for i in eachindex(axial_demand)]
+    moment_utilization = [ moment_demand[i] ≤ 0.1 ? 0 : moment_capacity[i]/moment_demand[i] for i in eachindex(moment_demand)]
+    shear_utilization  = [ shear_demand[i] ≤ 0.1 ? 0 : shear_capacity[i]/shear_demand[i] for i in eachindex(shear_demand)]
 
     # moment_utilization =
     # shear_utilizatishear

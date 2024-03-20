@@ -4,9 +4,9 @@ using CSV, DataFrames
 
 GLMakie.activate!()
 #load the catalog.
-results = CSV.read("src/Catalogs/18_03_catalog_for_test.csv", DataFrame);
+results = CSV.read("src/Catalogs/20_03_catalog_for_paper.csv", DataFrame);
 # results = results[1:10,:]
-
+println(size(results)[1])
 color_range = (minimum(results[!, :Mu]), maximum(results[!, :Mu]))
 x_axis = "fc′"
 x_label = "fc′ [MPa]"
@@ -106,9 +106,9 @@ marker_size = lift(colors) do c
     c.*7.5
 end
 
-colors = lift(colors) do c 
-    c.*results[!, :Mu]
-end
+# colors = lift(colors) do c 
+#     c.*results[!, :Mu]
+# end
 
 for i in eachindex(titles)
     row = div(i - 1, 5) + 1
@@ -117,7 +117,7 @@ for i in eachindex(titles)
     # println(row,",", col)
     # Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel="dps [mm]", xticks=0:25:350, limits=(0, 310, nothing, nothing))
     #plot non-zero as colorful plot
-    scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], colormap= :plasma, markersize= marker_size , color = colors, colorrange = color_range, transparency = true )
+    scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], colormap= :plasma , markersize = marker_size, colorrange = color_range )
     #plot zeros as black on top (that's why it is separated and plotted later.)
     # scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
 end

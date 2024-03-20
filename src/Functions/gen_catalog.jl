@@ -97,6 +97,29 @@ function get_catalog(L, t, Lc;
         # range_fpe = (0.00:0.005:0.2) * 1860.0 #MPa
         range_fpe = 0.0:10.0:500.0 #MPa
         range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+    elseif case == "myResults" 
+        println("Running myResults mode")
+        fc_fiber = CSV.read(fc′_path, DataFrame)
+        #These come in a set of (fc′,fR1, fR3)
+        range_fc′= convert(Array{Float64}, fc_fiber[!, :strength]) #some numbers can be Int.
+        range_fR1 = fc_fiber[!, :fR1]
+        range_fR3 = fc_fiber[!, :fR3]
+        range_dosage = fc_fiber[!, :dosage]
+        #in case the input lenghts are not consistant.
+        @assert length(range_fc′) == length(range_fR1) "Error! Number of rows of fc′ ≠ number of rows of fR1 "
+        @assert length(range_fc′) == length(range_fR3) "Error! Number of rows of fc′ ≠ number of rows of fR3 "
+        @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
+
+        # range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+        range_as = 2/4*[10, 12,14,16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+
+        range_dps_2 = [0.0]
+        range_dps_3 = vcat(0.0:50.0:300.0) 
+        range_dps_4 = [0.0]
+
+        # range_fpe = (0.00:0.005:0.2) * 1860.0 #MPa
+        range_fpe = 0.0:10.0:500.0 #MPa
+        range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
     else
         println("Error Invalid test case")

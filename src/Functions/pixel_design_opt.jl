@@ -24,10 +24,10 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
         en = demands[i, "e_idx"] #current element index
         sn = demands[i, "s_idx"] #current section index in that element.
 
-        pu = demands[i, "pu"]
-        mu = demands[i, "mu"]
+        pu = abs(demands[i, "pu"])
+        @show mu = demands[i, "mu"]
         vu = demands[i, "vu"]
-        ec_max = demands[i, "ec_max"]
+        ec_max = demands[i, "ec_max"]*1000
 		T_string = demands[i, "type"]
 		if T_string == "primary" || T_string == "secondary"
 			T = 3	
@@ -46,7 +46,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
             catalog
         )
         # @assert minimum(feasible_sections[!, :Vu]) >= vu
-		# @show minimum(feasible_sections[:, :Mu])
+		 @show minimum(feasible_sections[:, :Mu])
         if size(feasible_sections)[1] == 0 #if the number of feasible results = 0
             println(feasible_sections[!, :ID])
             println("section $sn: element $en")
@@ -140,7 +140,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		println(size(feasible_idx)[1], " available sections")
 
         #catalog was already sorted, so I think we can leave this part, just filter, to save time.
-        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, fpe, order(:dps, rev = true)])
+        mid_catalog = sort(catalog[feasible_idx, :], [:carbon, :fc′, :fpe, order(:dps, rev = true)])
 
         #now, loop each design in the sub catalog, see if "as" and "fpe" are available in all sections.
         #if not, remove that design from the sub catalog.
@@ -158,13 +158,18 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 			this_type = current_mid_design[:T]
 			this_dps = current_mid_design[:dps]
 
+			this_L = current_mid_design[:L]
+			this_t = current_mid_design[:t]
+			this_Lc = current_mid_design[:Lc]
+
 			#create a filter function that check every constrained parameter at once.
 			found_all = true
 
 			if this_type == "secondary"
-				fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type
+				#if it's a secondary beam, additionally fix the dps.
+				fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type && L == this_L && t == this_t && Lc == this_Lc
 			else
-				fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
+				fpe_as_type(fpe::Float64, as::Float64, type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && type == this_type && L == this_L && t == this_t && Lc == this_Lc
 			end
             # serviceability_check = true # Will add this.
 
@@ -174,10 +179,10 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				section_feasible_catalog = catalog[feasible_sections,:]
       
 				#a check function, ensures that these parameters happen at the same time.
-				if this_type == "secondary"
-					this_catalog = filter([:fpe, :as, :dps,:T] => fpe_as_dps_type, section_feasible_catalog)
+				if this_type == "secondary" 
+					this_catalog = filter([:fpe, :as, :dps,:T, :L,:t,:Lc] => fpe_as_dps_type, section_feasible_catalog)
 				else
-					this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+					this_catalog = filter([:fpe, :as, :T, :L,:t,:Lc] => fpe_as_type, section_feasible_catalog)
 				end
 
 				if size(this_catalog)[1] == 0
@@ -209,6 +214,10 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 	        this_as   = mid_catalog[final_design_index, :as]
 			this_type = mid_catalog[final_design_index, :T]
 			this_dps = mid_catalog[final_design_index, :dps]
+			this_L = mid_catalog[final_design_index, :L]
+			this_t = mid_catalog[final_design_index, :t]
+			this_Lc = mid_catalog[final_design_index, :Lc]
+
 			sections_designs = Dict{Int64,  Dict{Symbol,Union{Float64,Int64,String}}}(k =>Dict() for k in 1:ns) 
 	        for is in eachindex(elements_to_sections[i])
 
@@ -220,13 +229,13 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				section_feasible_catalog = catalog[feasible_idx,:]
 	            # this_catalog = filter([:fc′, :fpe, :as] => fc′_fpe_as, catalog[output_results[s], :])
 				if this_type == "secondary"
-					fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type
-					this_catalog = filter([:fpe, :as, :dps,:T] => fpe_as_dps_type, section_feasible_catalog)
+					fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type && L == this_L && t == this_t && Lc == this_Lc
+					this_catalog = filter([:fpe, :as, :dps,:T, :L,:t,:Lc] => fpe_as_dps_type, section_feasible_catalog)
 					sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #the lowest carbon then, dps will be the first index.
 
 				else
-					fpe_as_type(fpe::Float64, as::Float64, type::Float64) = fpe == this_fpe && as == this_as && type == this_type
-					this_catalog = filter([:fpe, :as, :T] => fpe_as_type, section_feasible_catalog)
+					fpe_as_type(fpe::Float64, as::Float64, type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && type == this_type && L == this_L && t == this_t && Lc == this_Lc
+					this_catalog = filter([:fpe, :as, :T, :L,:t,:Lc] => fpe_as_type, section_feasible_catalog)
 					sort!(this_catalog, [:carbon,:dps] )
 				end
 	            # this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
@@ -249,7 +258,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				minimum_dps = minimum(constrained_catalog[!, :dps])
 
 				# @show vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps])
-	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps, :load]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps, demands[s,:load]]))
+	            sections_designs[is] = Dict(vcat(catalog_keys, [:max_dps, :min_dps,]) .=> vcat(collect(catalog[select_ID, :]), [maximum_dps, minimum_dps]))
 	        end
 
 	  #       Create a PixelFrame element -> Find the deflection of this element. (Beam, Column, etc).
@@ -263,7 +272,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				compoundsection =  make_X2_layup_section(L, t, Lc)
 			elseif this_type == 3.0
 				compoundsection =  make_Y_layup_section(L, t, Lc)
-			elseif this_type = 4.0
+			elseif this_type == 4.0
 				compoundsection =  make_X4_layup_section(L, t, Lc)
 			else
 				println("Invalid type")
