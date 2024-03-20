@@ -25,7 +25,7 @@ function filter_demands!(demands::DataFrame, catalog::DataFrame)::Dict{Int64, Ve
         sn = demands[i, "s_idx"] #current section index in that element.
 
         pu = abs(demands[i, "pu"])
-        @show mu = demands[i, "mu"]
+        mu = demands[i, "mu"]
         vu = demands[i, "vu"]
         ec_max = demands[i, "ec_max"]*1000
 		T_string = demands[i, "type"]
@@ -71,7 +71,7 @@ Design map from element number -> sections -> designs
     !! not optimum yet.
 Constraints for the same element.
 """
-function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame;
+function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame;
 	demands_ser::DataFrame = DataFrame(),
 	start_mid::Bool = true)
 
@@ -236,7 +236,10 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 				else
 					fpe_as_type(fpe::Float64, as::Float64, type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && type == this_type && L == this_L && t == this_t && Lc == this_Lc
 					this_catalog = filter([:fpe, :as, :T, :L,:t,:Lc] => fpe_as_type, section_feasible_catalog)
-					sort!(this_catalog, [:carbon, order(:dps, rev=true)] )
+					# sort!(this_catalog, [:carbon, order(:dps, rev=true)] ) #should pick the lowest dps first, so it matched with the demands
+					#otherwise, it would be confusing on why the capacity is so high.
+					sort!(this_catalog, [:carbon, :dps]) #should pick the lowest dps first, so it matched with the demands
+
 				end
 	            # this_catalog = filter([:fpe, :as, :T] => fpe_as_type, catalog[feasible_idx, :])
 				if size(this_catalog)[1] == 0 
@@ -376,7 +379,7 @@ function find_optimum(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands
 		axial_component = as*fps*cos(θ)/1000 #kN
 		maxV = 0
 		for i in eachindex(element_designs)
-			println(element_designs[i][:Vu])
+			# println(element_designs[i][:Vu])
 			if element_designs[i][:Vu] > maxV 
 				maxV = element_designs[i][:Vu]
 			end

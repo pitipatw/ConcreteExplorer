@@ -1,6 +1,6 @@
-function preprocessing(demand_path::String)::DataFrame
+function preprocessing(demand_path::String, imagesavepath::String)::DataFrame
 
-    println("Plot saved at " * imagesavepath *"*")
+    println("Plot saved at " * imagesavepath)
     open(demand_path, "r") do f
         global demands = DataFrame(JSON.parse(f, dicttype=Dict{String,Any}))
         ns = size(demands)[1]
@@ -8,7 +8,7 @@ function preprocessing(demand_path::String)::DataFrame
         println("There are $ns points")
         println("Demands were loaded from:\n", demand_path)
     end
-    println(demands[1:10, :])
+    # println(demands[1:5, :])
 
     #make the correct types
     demands[!, :e_idx]= Int.(demands[!,:e_idx])
@@ -110,7 +110,7 @@ Make the element indices unique
 end
 
 
-function plot_distribution(demands, catalog)
+function plot_distribution(demands, catalog, imagesavepath)
     """
 Visualize the demand points
 """

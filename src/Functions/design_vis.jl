@@ -1,42 +1,82 @@
 using Makie, GLMakie, CairoMakie
 include("Geometry/pixelgeo.jl")
 
+function plot_feasible_sections(all_feasible_sections, save_image_directory)
+    # Threads.nthreads()
+    figures = Vector{Figure}(undef, size(demands)[1])
+    #select a section to see the available designs
+    # Threads.@threads for section_number in 1:size(demands)[1]
+    for section_number in 1:size(demands)[1]
+        if section_number < 100
+            @show section_number
+        end
+        # section_number = 1
 
-function plot_element(element_number::Int64, elements_designs::Dict;
+        figure_check_section = Figure(size=(500, 500))
+        ax_1 = Axis(figure_check_section[1, 1], xlabel="Moment [kNm]", ylabel="Shear [kN]", title=string(section_number))
+        ax_2 = Axis(figure_check_section[2, 1], xlabel="dps", ylabel="T")
+
+        scatter!(ax_1, catalog[all_feasible_sections[section_number], :Mu], catalog[all_feasible_sections[section_number], :Vu], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
+        scatter!(ax_2, catalog[all_feasible_sections[section_number], :dps], catalog[all_feasible_sections[section_number], :T], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
+
+        scatter!(ax_1, demands[section_number, :mu], demands[section_number, :vu], marker='x')
+        type_map = Dict("primary" => 3, "secondary" => 3, "columns" => 2)
+        scatter!(ax_2, demands[section_number, :ec_max], getindex.(Ref(type_map), demands[section_number, :type]), marker='x')
+
+        figures[section_number] = figure_check_section
+        # figure_check_section
+        # @show imagesavepath * "figure_check_section" * string(section_number) * ".png"
+        # save(imagesavepath * "figure_check_section" * string(section_number) * ".png", figure_check_section)
+    end
+
+    for i in eachindex(figures)
+        save(save_image_directory * "figure_check_section_" * string(i) * ".png", figures[i])
+    end
+
+    for i in eachindex(all_feasible_sections)
+        print("Section $i")
+        println(length(all_feasible_sections[i]))
+    end
+
+    return
+end
+
+
+function plot_element(element_number::Int64, elements_designs::Dict, elements_to_sections;
     L::Float64=250.0)
 
     sections = elements_to_sections[element_number]
-    @show ns = length(sections)
+    ns = length(sections)
     # element_number = string(element_number)
 
     L = elements_designs[element_number][1][:L]
     t = elements_designs[element_number][1][:t]
     Lc = elements_designs[element_number][1][:Lc]
 
-    @show set_fc′   = [elements_designs[element_number][i][:fc′] for i in 1:ns]
-    set_as    = [elements_designs[element_number][i][:as] for i in 1:ns]
-    set_fps   = [elements_designs[element_number][i][:fps] for i in 1:ns]
+    @show set_fc′ = [elements_designs[element_number][i][:fc′] for i in 1:ns]
+    set_as = [elements_designs[element_number][i][:as] for i in 1:ns]
+    set_fps = [elements_designs[element_number][i][:fps] for i in 1:ns]
     set_dosage = [elements_designs[element_number][i][:dosage] for i in 1:ns]
     # set_P     = [elements_designs[element_number][i][:load] for i in 1:ns]
     set_axial_force = [elements_designs[element_number][i][:axial_force] for i in 1:ns]
-    tendon_profile  = [elements_designs[element_number][i][:dps] for i in 1:ns]
-    axial_capacity  = abs.([elements_designs[element_number][i][:Pu] for i in 1:ns])
+    tendon_profile = [elements_designs[element_number][i][:dps] for i in 1:ns]
+    axial_capacity = abs.([elements_designs[element_number][i][:Pu] for i in 1:ns])
     moment_capacity = [elements_designs[element_number][i][:Mu] for i in 1:ns]
-    shear_capacity  = [elements_designs[element_number][i][:Vu] for i in 1:ns]
+    shear_capacity = [elements_designs[element_number][i][:Vu] for i in 1:ns]
     type = [elements_designs[element_number][i][:T] for i in 1:ns]
     if type[1] == 2.0
         type_title = "X2"
-    elseif type[1] == 3.0 
+    elseif type[1] == 3.0
         type_title = "Y"
-    elseif type[1] == 4.0 
+    elseif type[1] == 4.0
         type_title = "X4"
     else
         print("Invalid type")
     end
 
-    axial_demand  = abs.([demands[i, :pu] for i in sections])
+    axial_demand = abs.([demands[i, :pu] for i in sections])
     moment_demand = [demands[i, :mu] for i in sections]
-    shear_demand  = [demands[i, :vu] for i in sections]
+    shear_demand = [demands[i, :vu] for i in sections]
 
     #plot center around x = 0 
     n = length(tendon_profile)
@@ -58,9 +98,10 @@ function plot_element(element_number::Int64, elements_designs::Dict;
 
     f1 = Figure(size=(1200, 600))
     g = f1[1, 1] = GridLayout()
-    axs_design = Axis(g[1, 1], title="Element $type_title $element_number", titlesize=20,
+    axs_design = Axis(g[1, 1], title="Element $type_title $element_number (L,t,Lc): ($L,$t,$Lc)", titlesize=20,
         #aspect=DataAspect(),
-        limits=(-1.2*xmax, 1.2*xmax+2*res, -2 * L, 1.2*L+25), #used to be 1.2 L
+        # limits=(-1.2*xmax, 1.2*xmax+2*res, -2 * L, 1.2*L+25), #used to be 1.2 L
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, -400, 1.2 * L + 100), #used to be 1.2 L
         yticks=div(L, 100)*100:-100:-div(L, 100)*105,
         # yminorticks = IntervalsBetween(2),
         # yminorgridvisible = true,
@@ -68,109 +109,110 @@ function plot_element(element_number::Int64, elements_designs::Dict;
     )
 
     axs_axial = Axis(g[2, 1],# aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Axial [kN]",
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Axial [kN]",
     )
 
     axs_moment = Axis(g[3, 1], #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Moment [kNm]",
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Moment [kNm]",
     )
     axs_shear = Axis(g[4, 1], #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Shear [kN]",
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Shear [kN]",
     )
 
     linkxaxes!(axs_design, axs_axial, axs_moment, axs_shear)
 
-    axs_axial_ratio = Axis(g[2, 1], yaxisposition = :right,# aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
+    axs_axial_ratio = Axis(g[2, 1], yaxisposition=:right,# aspect=10,
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Utilization [ratio]",
     )
 
-    axs_moment_ratio = Axis(g[3, 1], yaxisposition =:right, #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
+    axs_moment_ratio = Axis(g[3, 1], yaxisposition=:right, #aspect=10,
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Utilization [ratio]",
     )
-    axs_shear_ratio = Axis(g[4, 1], yaxisposition =:right, #aspect=10,
-        limits=(-1.2*xmax, 1.2*xmax+2*res, nothing, nothing), ylabel="Utilization [ratio]",
+    axs_shear_ratio = Axis(g[4, 1], yaxisposition=:right, #aspect=10,
+        limits=(-1.2 * xmax, 1.2 * xmax + 2 * res, nothing, nothing), ylabel="Utilization [ratio]",
     )
 
     hidespines!(axs_axial_ratio)
     hidespines!(axs_moment_ratio)
     hidespines!(axs_shear_ratio)
-    hideydecorations!(axs_axial_ratio, ticks = false, label =false, ticklabels =false )
-    hideydecorations!(axs_moment_ratio, ticks = false, label =false, ticklabels =false )
-    hideydecorations!(axs_shear_ratio, ticks = false , label =false, ticklabels =false)
-ypos = 0
+    hideydecorations!(axs_axial_ratio, ticks=false, label=false, ticklabels=false)
+    hideydecorations!(axs_moment_ratio, ticks=false, label=false, ticklabels=false)
+    hideydecorations!(axs_shear_ratio, ticks=false, label=false, ticklabels=false)
+    ypos = 0
     points = []
     if type[1] == 3
         for i in 1:n
-            points = [x_range[i]-250, -L, 500, L * 1.5]
-            poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange= (0,80), colormap=cgrad(:Greys_3), 
-            strokecolor= :black,strokewidth = 2)
-            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
-            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
+            points = [x_range[i] - 250, -L, 500, L * 1.5]
+            poly!(axs_design, Rect(points...), color=set_fc′[i],
+                colorrange=(0, 80), colormap=cgrad(:Greys_3),
+                strokecolor=:black, strokewidth=2)
+            text!(axs_design, points[1], 100, text=string(set_fc′[i]))
+            text!(axs_design, points[1], 100 + 75, text=string(set_dosage[i]))
 
         end
-        section_pts = make_Y_layup_section(L,t,Lc)
+        section_pts = make_Y_layup_section(L, t, Lc)
         for s in section_pts.solids
-            poly!(axs_design, s.points.+[x_n+res+500;0], color = :grey)
+            poly!(axs_design, s.points .+ [x_n + res + 500; 0], color=:grey)
         end
         ypos = 150
-    elseif type[1] == 2 
+    elseif type[1] == 2
         for i in 1:n
-            points = [x_range[i]-250, -0.5*L, 500, L]
-            poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange= (0,80), colormap=cgrad(:Greys_3), 
-            strokecolor= :black,strokewidth = 2)
-            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
-            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
+            points = [x_range[i] - 250, -0.5 * L, 500, L]
+            poly!(axs_design, Rect(points...), color=set_fc′[i],
+                colorrange=(0, 80), colormap=cgrad(:Greys_3),
+                strokecolor=:black, strokewidth=2)
+            text!(axs_design, points[1], 100, text=string(set_fc′[i]))
+            text!(axs_design, points[1], 100 + 75, text=string(set_dosage[i]))
 
         end
         #plot cross section on the side of the beam plot
-        section_pts = make_X2_layup_section(L,t,Lc)
+        section_pts = make_X2_layup_section(L, t, Lc)
         for s in section_pts.solids
-            poly!(axs_design, s.points.+[x_n+res+500;0], color = :grey)
-            
+            poly!(axs_design, s.points .+ [x_n + res + 500; 0], color=:grey)
+
         end
         ypos = -250
     elseif type[1] == 4
         for i in 1:n
-            points = [x_range[i]-250, -L, 500, 2*L]
-            poly!(axs_design, Rect(points...), color=set_fc′[i], 
-            colorrange= (0,80), colormap=cgrad(:Greys_3), 
-            strokecolor= :black,strokewidth = 2)
-            text!(axs_design,points[1], points[2], text = string(set_fc′[i]))
-            text!(axs_design,points[1], points[2]+50, text = string(set_dosage[i]))
+            points = [x_range[i] - 250, -L, 500, 2 * L]
+            poly!(axs_design, Rect(points...), color=set_fc′[i],
+                colorrange=(0, 80), colormap=cgrad(:Greys_3),
+                strokecolor=:black, strokewidth=2)
+            text!(axs_design, points[1], 100, text=string(set_fc′[i]))
+            text!(axs_design, points[1], 100 + 75, text=string(set_dosage[i]))
 
         end
         #plot cross section on the side of the beam plot
-        section_pts = make_X4_layup_section(L,t,Lc)
+        section_pts = make_X4_layup_section(L, t, Lc)
         for s in section_pts.solids
-            poly!(axs_design, s.points.+[x_n+res+500;0], color = :grey)
+            poly!(axs_design, s.points .+ [x_n + res + 500; 0], color=:grey)
         end
-        ypos = -350
+
     else
         println("Invalid Type")
     end
-        
-    Colorbar(f1[1, 2], ticks=[40,60,80], colorrange=(40, 100), colormap=cgrad(:Greys_3))
+
+    Colorbar(f1[1, 2], ticks=[40, 60, 80], colorrange=(40, 100), colormap=cgrad(:Greys_3))
 
 
     tendon = poly!(axs_design, tendon_points, color=:skyblue, alpha=0.5, transparent=true)
     tendon_pts = scatter!(axs_design, tendon_points)
-    tendon = lines!(axs_design, x_range, -tendon_profile, linewidth = 5)
+    tendon = lines!(axs_design, x_range, -tendon_profile, linewidth=5)
 
     @show tendon_points
     for i in 1:n
-        text!(axs_design,tendon_points[1,i+n],tendon_points[2,i+n], text = string(set_as[i]))
+        text!(axs_design, tendon_points[1, i+n], tendon_points[2, i+n], text=string(round(set_as[i], digits=2)))
+        # string(round(set_axial_force[1], digits = 3))
     end
 
 
     #add text description
-    txt_force = round(maximum(set_fps.*set_as)/1000,digits = 3) #kN.
-    
-    text!(axs_design,-xmax-500, ypos, text = "Tendon load: "*string(txt_force)*" kN")
+    txt_force = round(maximum(set_fps .* set_as) / 1000, digits=3) #kN.
+    ypos = -400
+    text!(axs_design, -xmax - 500, ypos, text="Tendon load: " * string(txt_force) * " kN")
     # text!(axs_design,-xmax+700, ypos, text = "Apply test load "*string(set_P[1])* " kN")
-    text!(axs_design,-xmax+2000,ypos, text = "Axial post tensioned force "*string(round(set_axial_force[1], digits = 3))* " kN")
-    
+    text!(axs_design, -xmax + 2000, ypos, text="Axial post tensioned force " * string(round(set_axial_force[1], digits=3)) * " kN")
+
 
     # hidexdecorations!(axs_design, grid=false)
     # hidexdecorations!(axs_axial, grid=false)
@@ -201,15 +243,15 @@ ypos = 0
     # scatter!(axs_shear, x_range, shear_demand, color=:green, step=:center, marker = 'x', markersize = 20)
 
 
-    axial_utilization  = [ axial_demand[i] ≤ 0.1 ? 0 : axial_capacity[i]/axial_demand[i] for i in eachindex(axial_demand)]
-    moment_utilization = [ moment_demand[i] ≤ 0.1 ? 0 : moment_capacity[i]/moment_demand[i] for i in eachindex(moment_demand)]
-    shear_utilization  = [ shear_demand[i] ≤ 0.1 ? 0 : shear_capacity[i]/shear_demand[i] for i in eachindex(shear_demand)]
+    axial_utilization = [axial_demand[i] ≤ 0.1 ? 0 : axial_capacity[i] / axial_demand[i] for i in eachindex(axial_demand)]
+    moment_utilization = [moment_demand[i] ≤ 0.1 ? 0 : moment_capacity[i] / moment_demand[i] for i in eachindex(moment_demand)]
+    shear_utilization = [shear_demand[i] ≤ 0.1 ? 0 : shear_capacity[i] / shear_demand[i] for i in eachindex(shear_demand)]
 
     # moment_utilization =
     # shear_utilizatishear
-    scatter!(axs_axial_ratio, x_range, axial_utilization, color=:red, marker = :utriangle)
-    scatter!(axs_moment_ratio, x_range, moment_utilization, color=:blue, marker = :utriangle)
-    scatter!(axs_shear_ratio, x_range, shear_utilization, color=:green, marker = :utriangle)
+    scatter!(axs_axial_ratio, x_range, axial_utilization, color=:red, marker=:utriangle)
+    scatter!(axs_moment_ratio, x_range, moment_utilization, color=:blue, marker=:utriangle)
+    scatter!(axs_shear_ratio, x_range, shear_utilization, color=:green, marker=:utriangle)
 
 
 
