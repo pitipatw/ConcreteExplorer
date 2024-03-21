@@ -1,4 +1,4 @@
-include("Geometry/pixelgeo.jl")
+include("../Geometry/pixelgeo.jl")
 
 abstract type AbstractStructuralElement end 
 abstract type AbstractPixelFrameElement <: AbstractStructuralElement end 
@@ -14,7 +14,7 @@ mutable struct PixelFrameSection <: AbstractPixelFrameSection
 
     pt_area::Vector{Float64}
     pt_force::Vector{Float64}
-    pt_pos::Matrix{  }
+    pt_pos::Matrix{Float64}
 
     #Material Properties
     Ec::Float64  

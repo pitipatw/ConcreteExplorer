@@ -274,6 +274,18 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 			if this_type == 2.0
 				compoundsection =  make_X2_layup_section(L, t, Lc)
 			elseif this_type == 3.0
+			elseif this_type = 4.0
+				compoundsection =  make_X4_layup_section(L, t, Lc)
+			else
+				println("Invalid type")
+			end
+	        # L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
+			L = mid_catalog[final_design_index, :L] 
+			t = mid_catalog[final_design_index, :t] 
+			Lc = mid_catalog[final_design_index, :Lc] 
+			if this_type == 2.0
+				compoundsection =  make_X2_layup_section(L, t, Lc)
+			elseif this_type == 3.0
 				compoundsection =  make_Y_layup_section(L, t, Lc)
 			elseif this_type == 4.0
 				compoundsection =  make_X4_layup_section(L, t, Lc)
