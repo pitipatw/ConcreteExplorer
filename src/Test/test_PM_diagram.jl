@@ -1,4 +1,10 @@
+using AsapToolkit
+using Makie, GLMakie
 #PM diagram 
+include("..//Functions//Geometry//pixelgeo.jl")
+
+L = 205; t = 35; Lc = 35 
+section = make_Y_layup_section(L,t,Lc)
 
 fc′ = 28
 fy = 420
@@ -14,7 +20,7 @@ as = 100
 pn = 0.85*fc′*(w*d-as) + fy*as
 pu = 0.65*0.8*pn
 
-#zero tension 
+#zero tension at the tendon.
 c = d
 β1 = clamp(0.85 - 0.05 * (fc′ - 28.0) / 7, 0.65, 0.85)
 
