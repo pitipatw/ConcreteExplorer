@@ -361,6 +361,7 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 	for e in ne
 		if e ∉ skipped_elements
 		element_designs = elements_designs[e]
+		type = demands[elements_to_sections[e][1], :type]
 		ns = length(element_designs)
 		support_dps = element_designs[1][:dps]
 		next_dps = element_designs[2][:dps]
@@ -373,18 +374,23 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 		@assert next_dps == another_next_dps "Symmetry Error next to supports: $next_dps ≠ $another_next_dps."
 		
 		as = element_designs[1][:as]
-		fps = element_designs[1][:fps]
+		fps = maximum([element_designs[i][:fps] for i in eachindex(element_designs)])
 
 		L = 500.0 # That's the distance between the 2 deviated tendons (conservative)
 		θ = atan((next_dps-support_dps)/L)
 		# rad2deg(θ)
-		axial_component = as*fps*cos(θ)/1000 #kN
+		@show axial_component = as*fps*cos(θ)/1000 #kN
 		maxV = 0
-		for i in eachindex(element_designs)
-			# println(element_designs[i][:Vu])
-			if element_designs[i][:Vu] > maxV 
-				maxV = element_designs[i][:Vu]
+		if type == "primary"
+			@show maxV =  maximum(demands[elements_to_sections[e], :vu])
+		elseif type == "secondary" || type == "columns"
+			for i in eachindex(element_designs)
+				if element_designs[i][:Vu] > maxV 
+					maxV = element_designs[i][:Vu]
+				end
 			end
+		else 
+			println("Invalid Type")
 		end
 
 		required_normal_force = maxV/μs #kN

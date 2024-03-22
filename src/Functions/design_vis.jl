@@ -66,7 +66,10 @@ function plot_element(element_number::Int64, elements_designs::Dict, elements_to
     axial_capacity = abs.([elements_designs[element_number][i][:Pu] for i in 1:ns])
     moment_capacity = [elements_designs[element_number][i][:Mu] for i in 1:ns]
     shear_capacity = [elements_designs[element_number][i][:Vu] for i in 1:ns]
+    set_embodied_carbon = [elements_designs[element_number][i][:carbon] for i in 1:ns]
     type = [elements_designs[element_number][i][:T] for i in 1:ns]
+
+    set_max_dps = 1000 .*[demands[elements_to_sections[element_number][i], :ec_max] for i in eachindex(elements_to_sections[ element_number])]
     if type[1] == 2.0
         type_title = "X2"
     elseif type[1] == 3.0
@@ -201,6 +204,7 @@ function plot_element(element_number::Int64, elements_designs::Dict, elements_to
     tendon = poly!(axs_design, tendon_points, color=:skyblue, alpha=0.5, transparent=true)
     tendon_pts = scatter!(axs_design, tendon_points)
     tendon = lines!(axs_design, x_range, -tendon_profile, linewidth=5)
+    tendon_constraints = lines!(axs_design, x_range,  -set_max_dps, color = :red, linewidth = 2)
 
     @show tendon_points
     for i in 1:n
@@ -210,11 +214,26 @@ function plot_element(element_number::Int64, elements_designs::Dict, elements_to
 
 
     #add text description
-    txt_force = round(maximum(set_fps .* set_as) / 1000, digits=3) #kN.
-    ypos = -400
-    text!(axs_design, -xmax - 500, ypos, text="Tendon load: " * string(txt_force) * " kN")
+    txt_force = round(maximum(set_fps .* set_as) / 1000, digits=1) #kN.
+    if type[1] == 2.0
+        ypos1 = -200 
+        ypos2 = -300
+        ypos3 = -300
+        xpos1 = -1000
+        xpos2 = -1000
+        xpos3 = 0
+    else
+        ypos = -400
+        xpos = -xmax - 500
+
+        ypos1= ypos; ypos2 = ypos; ypos3 = ypos; 
+        xpos1 = xpos; xpos2 = xpos+1500; xpos3 = 0
+    end
+
+    text!(axs_design, xpos1, ypos1, text="Tendon load: " * string(txt_force) * " kN")
     # text!(axs_design,-xmax+700, ypos, text = "Apply test load "*string(set_P[1])* " kN")
-    text!(axs_design, -xmax + 2000, ypos, text="Axial post tensioned force " * string(round(set_axial_force[1], digits=3)) * " kN")
+    text!(axs_design, xpos2, ypos2, text="Axial post tensioned force " * string(round(set_axial_force[1], digits=1)) * " kN")
+    text!(axs_design, xpos3, ypos3, text = "Carbon:"*string(round(sum(set_embodied_carbon), digits = 2)))
 
 
     # hidexdecorations!(axs_design, grid=false)
@@ -246,9 +265,9 @@ function plot_element(element_number::Int64, elements_designs::Dict, elements_to
     # scatter!(axs_shear, x_range, shear_demand, color=:green, step=:center, marker = 'x', markersize = 20)
 
 
-    axial_utilization = [axial_demand[i] ≤ 0.1 ? 0 : axial_capacity[i] / axial_demand[i] for i in eachindex(axial_demand)]
-    moment_utilization = [moment_demand[i] ≤ 0.1 ? 0 : moment_capacity[i] / moment_demand[i] for i in eachindex(moment_demand)]
-    shear_utilization = [shear_demand[i] ≤ 0.1 ? 0 : shear_capacity[i] / shear_demand[i] for i in eachindex(shear_demand)]
+    axial_utilization = [axial_demand[i] / axial_capacity[i] for i in eachindex(axial_demand)]
+    moment_utilization = [moment_demand[i] / moment_capacity[i] for i in eachindex(moment_demand)]
+    shear_utilization = [shear_demand[i] / shear_capacity[i] for i in eachindex(shear_demand)]
 
     # moment_utilization =
     # shear_utilizatishear
