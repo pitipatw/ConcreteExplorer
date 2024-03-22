@@ -7,16 +7,19 @@ using AsapToolkit #, kjlMakie
 
 # set_theme!(kjl_light)
 println(pwd())
-include("Functions//definition.jl");
-include("Functions//functions.jl");
+
+
 include("Functions/catalog_vis.jl")
 # include("Functions/structuralelement.jl")
-include("Functions//generalfunctions.jl");
 include("Functions/preprocessing.jl");
 include("Functions/pixel_design_search.jl");
-include("Functions//get_Deflection.jl");
-include("Functions//interpolations.jl");
 include("Functions/design_vis.jl")
+
+include("Functions//Deflection//get_Deflection.jl");
+include("Functions//Deflection//interpolations.jl");
+include("Functions//Deflection//definition.jl");
+include("Functions//Deflection//functions.jl");
+include("Functions//Deflection//generalfunctions.jl");
 
 
 
@@ -31,8 +34,8 @@ include("Functions/design_vis.jl")
 """
 
 
-date = "20_03";
-version = "02";
+date = "21_03";
+version = "01";
 date *= "_"*version
 save_directory = "src//Results//"*date*"//";
 save_image_directory = save_directory*"Images//";
@@ -74,8 +77,8 @@ second_part = ["_occupancy_demands"];#,"_service_demands"]
 
 all_files = [i*j for i in first_part for j in second_part ] ;
 
-for i in eachindex(all_files) 
-    # i = 1 
+# for i in eachindex(all_files) 
+    i = 1 
     filename = all_files[i]
     demand_path = joinpath(@__DIR__, "Demands//"*additional_path*filename*".json");
 
@@ -110,4 +113,4 @@ for i in eachindex(all_files)
     open(save_directory*"_output_from_"*filename*".json", "w") do f
         JSON.print(f, output)
     end
-end
+# end

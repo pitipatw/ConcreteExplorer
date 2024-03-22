@@ -20,8 +20,8 @@ function catalog_vis(catalog_path::String)
     units = ["MPa", "mm2", "mm", "MPa", "MPa", "kg steel/m3 concrete", "kgCO2e/m", "mm", "mm", "mm", "-", "kN", "kNm", "kN"]
 
     Axes = Vector{Axis}(undef, length(titles))
-    g1 = f_catalog[3, 4] = GridLayout()
-    g2 = f_catalog[3, 5] = GridLayout()
+    # g1 = f_catalog[3, 4] = GridLayout()
+    # g2 = f_catalog[3, 5] = GridLayout()
 
     slides = Vector{Any}(undef, length(titles))
     for i in eachindex(titles)
@@ -30,7 +30,7 @@ function catalog_vis(catalog_path::String)
         max = maximum(results[!, titles[i]])
         gap = (max - min) / 10
         slide_row = div(i - 1, 5) + 1
-        slide_col = 2 * (mod(i + 4, 5) + 1)
+        slide_col = 3*mod(i + 4, 5) + 2
         if gap == 0
             range = min
         else 
@@ -49,21 +49,7 @@ function catalog_vis(catalog_path::String)
         # end
     end
 
-    #based, plot everything in grey first.
-    for i in eachindex(titles)
-        row = div(i - 1, 5) + 1
-        col = mod(i + 4, 5) + 1
 
-        #Plot the graphs on odd rows
-        col = 2 * (col - 1) + 1
-        # println(row,",", col)
-        # Box is here for checking the plot area.
-        # Box(f_catalog[row, col], color = (:red, 0.2), strokewidth = 0)
-        Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel=x_label, xticks=0:25:350, limits=(-10, x_max * 1.05, nothing, nothing))
-        #plot non-zero as colorful plot
-        scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], color=:grey, markersize=2, transparent=true)
-        #plot zeros as black on top (that's why it is separated and plotted later.)
-    end
 
     #special filter
     # results = subset(results , :fc′ => x-> x .== 60)
@@ -103,22 +89,52 @@ function catalog_vis(catalog_path::String)
         end
     end
 
+
     marker_size = lift(colors) do c
         c .* 7.5
     end
+    labeltexts = Vector{Observable{String}}(undef, length(val))
+    for i in eachindex(val)
+        # show(val[i])
+        row = div(i - 1, 5) + 1
+        col = 3*mod(i + 4, 5) + 3
+        labeltexts[i] = lift(val[i]) do int
+            string(round.(int, digits = 2))
+        end 
 
+        Label(f_catalog[row,col],labeltexts[i],
+        tellheight = false,
+        rotation = pi/2
+        )
+        # text()
+    end
     # colors = lift(colors) do c 
     #     c.*results[!, :Mu]
     # end
-
+    #based, plot everything in grey first.
     for i in eachindex(titles)
         row = div(i - 1, 5) + 1
-        col = mod(i + 4, 5) + 1
-        col = 2 * (col - 1) + 1
+        col = 3*mod(i + 4, 5) + 1
+
+        #Plot the graphs on odd rows
+        # println(row,",", col)
+        # Box is here for checking the plot area.
+        # Box(f_catalog[row, col], color = (:red, 0.2), strokewidth = 0)
+        Axes[i] = Axis(f_catalog[row, col], title=titles[i]*" ["*units[i]*"]", xlabel=x_label, xticks=0:25:350, limits=(-10, x_max * 1.05, nothing, nothing))
+        #plot non-zero as colorful plot
+        scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], color=:grey, markersize=2, transparent=true)
+        #plot zeros as black on top (that's why it is separated and plotted later.)
+
+        # row = div(i - 1, 5) + 1
+        # col = mod(i + 4, 5) + 1
+        # col = 2 * (col - 1) + 1
         # println(row,",", col)
         # Axes[i] = Axis(f_catalog[row, col], title=titles[i], xlabel="dps [mm]", xticks=0:25:350, limits=(0, 310, nothing, nothing))
         #plot non-zero as colorful plot
-        scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], colormap=:plasma, markersize=marker_size, colorrange=color_range)
+        scatter!(Axes[i], results[!, x_axis], results[!, titles[i]], colormap=:plasma,
+        markersize=marker_size, 
+        color = colors,
+        colorrange=color_range)
         #plot zeros as black on top (that's why it is separated and plotted later.)
         # scatter!(Axes[i], results_zeros[!, :dps], results_zeros[!, titles[i]], color=:black, marker='x', markersize=20)
     end

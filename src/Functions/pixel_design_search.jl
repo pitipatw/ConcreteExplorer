@@ -274,18 +274,6 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 			if this_type == 2.0
 				compoundsection =  make_X2_layup_section(L, t, Lc)
 			elseif this_type == 3.0
-			elseif this_type = 4.0
-				compoundsection =  make_X4_layup_section(L, t, Lc)
-			else
-				println("Invalid type")
-			end
-	        # L, t, Lc = [205.0 35.0 30.0] #Should make this tie to the catalog, but for now we only have 1 configuration of L,t,Lc.
-			L = mid_catalog[final_design_index, :L] 
-			t = mid_catalog[final_design_index, :t] 
-			Lc = mid_catalog[final_design_index, :Lc] 
-			if this_type == 2.0
-				compoundsection =  make_X2_layup_section(L, t, Lc)
-			elseif this_type == 3.0
 				compoundsection =  make_Y_layup_section(L, t, Lc)
 			elseif this_type == 4.0
 				compoundsection =  make_X4_layup_section(L, t, Lc)
@@ -356,7 +344,9 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 	  #       dis_history, P =  get_Deflection(pixelframeelement, load, loadstep = 1000)
 			# @show length(dis_history)
 	  #       δ = dis_history[end]
-	
+	#   if δ> L/240 
+	# continue
+	#   end 
 	  # elements_designs[i] = [sections_designs, δ, δ/(Le/240)]
 			elements_designs[i] = sections_designs #, δ, δ/(Le/240)]
 	    end
@@ -385,7 +375,7 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 		as = element_designs[1][:as]
 		fps = element_designs[1][:fps]
 
-		L = 500.0 # That's the distance between the 2 deviators.
+		L = 500.0 # That's the distance between the 2 deviated tendons (conservative)
 		θ = atan((next_dps-support_dps)/L)
 		# rad2deg(θ)
 		axial_component = as*fps*cos(θ)/1000 #kN

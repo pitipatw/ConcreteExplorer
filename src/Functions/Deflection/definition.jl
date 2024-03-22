@@ -24,19 +24,19 @@ mutable struct Section
     Atr::Float64 # Transformed area of the cross section [mm^2]
     Itr::Float64 # Moment of inertia of the transformed cross section [mm^4]
     Zb::Float64  # Section modulus of the concrete section from the centroid to extreme tension fiber [mm^3]
-    K1::Float64 
+    K1::Float64
     K2::Float64
 
     function Section(em::F)
 
-    if Ld < Ls 
-        K1 = Ls/L - 1
-        K2 = Ls/Ls(Ld/L)^2 - (Ls/L)^2 
-    elseif Ld ≥ Ls
-        K1 = Ld/L - 1
-        K2 = 0
+        if Ld < Ls
+            K1 = Ls / L - 1
+            K2 = Ls / Ls(Ld / L)^2 - (Ls / L)^2
+        elseif Ld ≥ Ls
+            K1 = Ld / L - 1
+            K2 = 0
+        end
     end
-
 
 end
 

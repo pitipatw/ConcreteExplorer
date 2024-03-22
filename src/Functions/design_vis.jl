@@ -3,6 +3,9 @@ include("Geometry/pixelgeo.jl")
 
 function plot_feasible_sections(all_feasible_sections, save_image_directory)
     # Threads.nthreads()
+    if !ispath(save_image_directory * "check_sections//")
+        mkdir(save_image_directory * "check_sections//")
+    end
     figures = Vector{Figure}(undef, size(demands)[1])
     #select a section to see the available designs
     # Threads.@threads for section_number in 1:size(demands)[1]
@@ -21,7 +24,7 @@ function plot_feasible_sections(all_feasible_sections, save_image_directory)
 
         scatter!(ax_1, demands[section_number, :mu], demands[section_number, :vu], marker='x')
         type_map = Dict("primary" => 3, "secondary" => 3, "columns" => 2)
-        scatter!(ax_2, demands[section_number, :ec_max], getindex.(Ref(type_map), demands[section_number, :type]), marker='x')
+        scatter!(ax_2, demands[section_number, :ec_max]*1000, getindex.(Ref(type_map), demands[section_number, :type]), marker='x')
 
         figures[section_number] = figure_check_section
         # figure_check_section
@@ -30,7 +33,7 @@ function plot_feasible_sections(all_feasible_sections, save_image_directory)
     end
 
     for i in eachindex(figures)
-        save(save_image_directory * "figure_check_section_" * string(i) * ".png", figures[i])
+        save(save_image_directory * "check_sections//figure_check_section_" * string(i) * ".png", figures[i])
     end
 
     for i in eachindex(all_feasible_sections)
