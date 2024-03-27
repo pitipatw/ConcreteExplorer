@@ -8,11 +8,14 @@ Return embodied carbon coefficient of concrete based on fc′
 """
 function fc2e(fc′::Real; mode::String = "default")::Float64
     if mode =="default"
-        #data on 25-80 MPa -> linearly interpolated to 100MPa.
+        #data on 25-80 MPa (Holcim) -> linearly interpolated to 100MPa.
         cfc = 1.6947*fc′ + 267.53
     elseif mode == "Holcim fiber"
         #only valid up to 60MPa.
         cfc = -0.0626944435544512 * fc′^2 + 10.0086510099949 * fc′ + 84.14807
+    elseif mode == "myResults"
+        #using data from J Broyles's paper
+        cfc = 4.5726*fc′ + 217.29
     else 
         println("Invalid Mode")
         return nothing
@@ -26,7 +29,7 @@ end
 Get the embodied carbon coefficient of a concrete mix with steel fiber dosage
 """
 function fc2e(fc′::Real, dosage::Real)::Float64
-    cfc = fc2e(fc′) + 1.4*dosage #dosage: kg steel/m3 concret. 
+    cfc = fc2e(fc′, mode = "Holcim fiber") + 1.4*dosage #dosage: kg steel/m3 concret. 
     return cfc
 end
 

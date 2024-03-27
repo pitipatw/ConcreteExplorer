@@ -7,14 +7,14 @@ using AsapToolkit #, kjlMakie
 
 # set_theme!(kjl_light)
 println(pwd())
-include("Functions//definition.jl");
-include("Functions//functions.jl");
+# include("Functions//definition.jl");
+# include("Functions//functions.jl");
 # include("Functions/structuralelement.jl")
-include("Functions//generalfunctions.jl");
+# include("Functions//generalfunctions.jl");
 include("Functions/preprocessing.jl");
-include("Functions/pixel_design_search.jl");
-include("Functions//get_Deflection.jl");
-include("Functions//interpolations.jl");
+include("Functions/pixel_design_search_paper.jl");
+# include("Functions//get_Deflection.jl");
+# include("Functions//interpolations.jl");
 include("Functions/design_vis.jl");
 
 
@@ -29,7 +29,7 @@ include("Functions/design_vis.jl");
 2. Turn everything into a gradient based optimization
 """
 
-date = "20_03";
+date = "27_03";
 version = "test_";
 version = "building_test"
 date = date*"_"*version
@@ -72,42 +72,8 @@ for i in eachindex(all_files)
     #Get feasible sections (subcatalog) for each demand point.
     all_feasible_sections = filter_demands!(demands, catalog)
 
-
-    # Threads.nthreads()
-    # figures = Vector{Figure}(undef, size(demands)[1])
-    # # #select a section to see the available designs
-    # # # Threads.@threads for section_number in 1:size(demands)[1]
-    # for section_number in 1:size(demands)[1]
-    #     if section_number < 100
-    #         @show section_number
-    #     end
-    #     # section_number = 1
-
-    #     figure_check_section = Figure(size=(500, 500))
-    #     ax_1 = Axis(figure_check_section[1, 1], xlabel="Moment [kNm]", ylabel="Shear [kN]", title=string(section_number))
-    #     ax_2 = Axis(figure_check_section[2, 1], xlabel="dps", ylabel="T")
-
-    #     scatter!(ax_1, catalog[all_feasible_sections[section_number], :Mu], catalog[all_feasible_sections[section_number], :Vu], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
-    #     scatter!(ax_2, catalog[all_feasible_sections[section_number], :dps], catalog[all_feasible_sections[section_number], :T], color=catalog[all_feasible_sections[section_number], :fc′], colorrange=extrema(catalog[!, :fc′]))
-
-    #     scatter!(ax_1, demands[section_number, :mu], demands[section_number, :vu], marker='x')
-    #     type_map = Dict("primary" => 3, "secondary" => 3, "columns" => 2)
-    #     scatter!(ax_2, demands[section_number, :ec_max], getindex.(Ref(type_map), demands[section_number, :type]), marker='x')
-
-    #     figures[section_number] = figure_check_section
-    #     # figure_check_section
-    #     # @show imagesavepath * "figure_check_section" * string(section_number) * ".png"
-    #     # save(imagesavepath * "figure_check_section" * string(section_number) * ".png", figure_check_section)
-    # end
-
-    # for i in eachindex(figures)
-    #     save(imagesavepath * "figure_check_section" * string(i) * ".png", figures[i])
-    # end
-
-    # for i in 1:length(all_feasible_sections)
-    #     print("Section $i")
-    #     println(length(all_feasible_sections[i]))
-    # end
+    for c in [1,2,3,4,5]
+    end 
 
     elements_designs, elements_to_sections, sections_to_designs, skipped_elements = search_design(all_feasible_sections, demands);
 

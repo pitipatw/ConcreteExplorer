@@ -97,6 +97,8 @@ function get_catalog(L, t, Lc;
         # range_fpe = (0.00:0.005:0.2) * 1860.0 #MPa
         range_fpe = 0.0:10.0:500.0 #MPa
         range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
+
+
     elseif case == "myResults" 
         println("Running myResults mode")
         fc_fiber = CSV.read(fc′_path, DataFrame)
@@ -111,14 +113,14 @@ function get_catalog(L, t, Lc;
         @assert length(range_fc′) == length(range_dosage) "Error! Number of rows of fc′ ≠ number of rows of fiber dosage "
 
         # range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
-        range_as = 2/4*[10, 12,14,16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
+        range_as = 2/4*[10, 12, 14, 16].^2*pi # x2 are for 2 ropes on 2 sides 12.7 and 15.2 mm dia wires.
 
         range_dps_2 = [0.0]
-        range_dps_3 = vcat(0.0:50.0:300.0) 
+        range_dps_3 = vcat(0.0:50.0:400.0) 
         range_dps_4 = [0.0]
 
         # range_fpe = (0.00:0.005:0.2) * 1860.0 #MPa
-        range_fpe = 0.0:10.0:500.0 #MPa
+        range_fpe = 0.0:50.0:500.0 #MPa
         range_type = [2.0, 3.0, 4.0] #PixelFrame configuration -> Y = 3 ,X2 = 2, X4 = 4.
     
     else
