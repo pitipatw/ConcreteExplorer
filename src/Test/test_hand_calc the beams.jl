@@ -1,3 +1,4 @@
+include("../Functions/Geometry/pixelgeo.jl")
 section = make_Y_layup_section(205,35,30)
 ct = section.ymax - section.centroid[2] 
 cb = section.centroid[2] - section.ymin
@@ -5,18 +6,22 @@ cb = section.centroid[2] - section.ymin
 st = section.Ix/ct 
 sb = section.Ix/cb
 
-
-L = 5000
+L = 5500
 I = section.Ix
 area = section.area
-pi*16*2
+
 fc′ = 40
 Ec = 4700*sqrt(fc′)
 ft =  0.25*sqrt(fc′)
 fc = 0.6*fc′
-w = 2400*9.81*area/1e9 #N/mm
 
+w_selfweight = 2400*9.81*area/1e9 #N/mm
+M_selfweight = w*L^2/8
+
+Pd = M_selfweight/sb
 δmax =  5/384*w*L^4/(Ec*I)
+
+
 
 δlimit = 5000/240
 
