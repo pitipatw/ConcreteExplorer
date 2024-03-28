@@ -41,7 +41,7 @@ println("Date: $date \nFile version $version")
 # catalog = CSV.read("src/Catalogs/MAR08_1_catalog_alltypes.csv", DataFrame);
 catalog = CSV.read("src//Catalogs//20_03_catalog_for_paper.csv", DataFrame);
 # catalog = CSV.read("src//Catalogs//18_03_catalog_for_test.csv", DataFrame);
-println(catalog[1:20, :]);
+println(catalog[1:10, :]);
 catalog[!,:ID] = 1:size(catalog)[1]
 
 #load demands into a dictionary
@@ -73,9 +73,10 @@ for i in eachindex(all_files)
     all_feasible_sections = filter_demands!(demands, catalog)
 
     for c in [1,2,3,4,5]
+        elements_designs, elements_to_sections, sections_to_designs, skipped_elements = search_design(c , all_feasible_sections, demands)
     end 
 
-    elements_designs, elements_to_sections, sections_to_designs, skipped_elements = search_design(all_feasible_sections, demands);
+    # elements_designs, elements_to_sections, sections_to_designs, skipped_elements = search_design(all_feasible_sections, demands);
 
     if !(ispath("src//Results//"*date))
         mkpath(date)

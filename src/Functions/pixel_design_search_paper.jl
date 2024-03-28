@@ -71,9 +71,23 @@ Design map from element number -> sections -> designs
     !! not optimum yet.
 Constraints for the same element.
 """
-function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame;
+function search_design(case::Int64, all_feasible_sections::Dict{Int64, Vector{Int64}}, demands::DataFrame;
 	demands_ser::DataFrame = DataFrame(),
 	start_mid::Bool = true)
+
+	"""cases 
+	1.per element, fixed everything 
+	maybe this should be done on the catalog side?
+		choose fc' 40, 45, 50, 55, 60, 70, 80, 90, 100 
+		fpe = 0
+		dps constant
+
+	2. varying fc' on one element
+	3. varying fc' and dps 
+	4. fixed fc', dps, non-zero fpe.
+	5. varying fc', dps, non-zero fpe.
+
+	"""
 
 	if size(demands_ser)[1] == 1 
 		println("Couldn't find service demands...")
@@ -102,6 +116,7 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 	for i in 1:size(ne)[1]
 		println(i, " => ",elements_to_sections[i])
 	end
+
 
     #find as, and fpe that appear in all sections in an element.
     for i in ne #go through each element.
@@ -153,6 +168,7 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
         for d_idx in 1:total_mid_catalog # go through every possible mid catalog.
 
             current_mid_design = mid_catalog[d_idx, :]
+			this_fc′  = current_mid_design[:fc′]
 			this_fpe  = current_mid_design[:fpe]
 			this_as   = current_mid_design[:as]
 			this_type = current_mid_design[:T]
@@ -165,13 +181,17 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
 			#create a filter function that check every constrained parameter at once.
 			found_all = true
 
-			if this_type == "secondary"
-				#if it's a secondary beam, additionally fix the dps.
-				fpe_as_dps_type(fpe::Float64, as::Float64, dps::Float64,type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && dps == this_dps && type == this_type && L == this_L && t == this_t && Lc == this_Lc
-			else
-				fpe_as_type(fpe::Float64, as::Float64, type::Float64, L::Real, t::Real, Lc::Real) = fpe == this_fpe && as == this_as && type == this_type && L == this_L && t == this_t && Lc == this_Lc
-			end
-            # serviceability_check = true # Will add this.
+			if case == 1 
+				filter_func(fc′, as, dps, fpe, type, L, t, Lc) = prod.([fc′, as, dps, fpe, type, L, t, Lc] .&& [this_fc′, this_as, this_dps, 0, this_type, this_L, this_t, this_Lc])
+			elseif case == 2 
+				filter_func(as, dps, fpe, type, L, t, Lc) = prod.([as, dps, fpe, type, L, t, Lc] .&& [this_as, this_dps, 0, this_type, this_L, this_t, this_Lc])
+			elseif case == 3 
+				filter_func(as, fpe, type, L, t, Lc) = prod.([as, fpe, type, L, t, Lc] .&& [this_as, 0, this_type, this_L, this_t, this_Lc])
+			elseif case == 4
+				filter_func(fc′, as, type, L, t, Lc) = prod.([fc′, as, type, L, t, Lc] .&& [this_fc′, this_as, this_type, this_L, this_t, this_Lc])
+			elseif case == 5 
+				filter_func(as, fpe, type, L, t, Lc) = prod.([as, fpe, type, L, t, Lc] .&& [this_as, this_fpe, this_type, this_L, this_t, this_Lc])
+			end 
 
             for s in sections #check if as and fpe occurs in other feasible designs of other sections.
 				println("Check section $s")
@@ -180,9 +200,11 @@ function search_design(all_feasible_sections::Dict{Int64, Vector{Int64}}, demand
       
 				#a check function, ensures that these parameters happen at the same time.
 				if this_type == "secondary" 
-					this_catalog = filter([:fpe, :as, :dps,:T, :L,:t,:Lc] => fpe_as_dps_type, section_feasible_catalog)
+					this_catalog = filter([:fpe, :as, :dps, :T, :L, :t, :Lc] => fpe_as_dps_type, section_feasible_catalog)
+					this_catalog = filter([:fpe, :as, :dps, :T, :L, :t, :Lc] => filter_func, section_feasible_catalog)
 				else
-					this_catalog = filter([:fpe, :as, :T, :L,:t,:Lc] => fpe_as_type, section_feasible_catalog)
+					this_catalog = filter([:fpe, :as, :T, :L, :t, :Lc] => fpe_as_type, section_feasible_catalog)
+					this_catalog = filter([:fpe, :as, :dps, :T, :L, :t, :Lc]=> filter_func, section_feasible_catalog)
 				end
 
 				if size(this_catalog)[1] == 0
